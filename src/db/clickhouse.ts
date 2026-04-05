@@ -58,5 +58,5 @@ export async function initClickHouseSchema() {
     `,
   })
 
-  console.log('✅ ClickHouse schema initialized')
+  console.log('ClickHouse schema initialized')
 }

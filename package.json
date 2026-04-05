@@ -18,6 +18,7 @@
     "prepare": "husky",
     "lint": "npx eslint \"src/**/*.{ts,js}\"",
     "build": "tsc --noEmit && cross-env NODE_ENV=production node scripts/build.js",
+    "db:init": "tsx scripts/init-db.ts",
     "dev": "npm run dev:stdio",
     "dev:stdio": "cross-env NODE_ENV=local concurrently \"tsc --noEmit --watch\" \"node scripts/dev.js\"",
     "dev:web": "cross-env NODE_ENV=local TRANSPORT=web concurrently \"tsc --noEmit --watch\" \"node scripts/dev.js\"",

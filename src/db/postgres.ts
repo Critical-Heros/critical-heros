@@ -71,7 +71,7 @@ export async function initPostgresSchema() {
         updated_at     TIMESTAMP DEFAULT now()
       );
     `)
-    console.log('✅ PostgreSQL schema initialized')
+    console.log('PostgreSQL schema initialized')
   } finally {
     client.release()
   }
