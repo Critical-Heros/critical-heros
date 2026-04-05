@@ -25,7 +25,8 @@
     "test": "vitest run",
     "report": "c8 report --reporter=lcov --reporter=html",
     "coverage": "rimraf coverage && npm run test",
-    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 -n changelog-option.js"
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 -n changelog-option.js",
+    "dev:web:ts": "cross-env NODE_ENV=local TRANSPORT=web tsx src/index.ts web"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
