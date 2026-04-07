@@ -17,7 +17,7 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - run: npm install
+      - run: npm install --legacy-peer-deps
       - run: make check-build
 
   check-style:
@@ -32,6 +32,6 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - run: npm install
+      - run: npm install --legacy-peer-deps
       - run: make check-style
 

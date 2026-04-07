@@ -20,7 +20,7 @@ export const config = {
   sourcemap: isDev,
   minify: isProd,
   platform: 'node',
-  external: ['yargs', 'fastify', '@fastify/cors', 'nanoid', 'zod', 'dotenv', '@modelcontextprotocol/sdk'],
+  external: ['yargs', 'fastify', '@fastify/cors', 'nanoid', 'zod', 'dotenv', '@modelcontextprotocol/sdk', '@clickhouse/client', 'pg', '@aws-sdk/client-s3', '@octokit/rest'],
   alias: {
     '@': path.resolve(dirname, '../src'),
   },
