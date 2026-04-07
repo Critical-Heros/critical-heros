@@ -25,7 +25,7 @@ export default function register(server: McpServer, _options: OptionsType) {
         format: 'JSONEachRow',
       })
 
-      const rows = await result.json() as any[]
+      const rows = (await result.json()) as any[]
 
       if (rows.length === 0) {
         return {

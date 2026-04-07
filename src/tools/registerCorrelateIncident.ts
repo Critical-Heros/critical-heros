@@ -33,27 +33,35 @@ export default function register(server: McpServer, _options: OptionsType) {
         format: 'JSONEachRow',
       })
 
-      const commits = await result.json() as any[]
+      const commits = (await result.json()) as any[]
 
       if (commits.length === 0) {
         return {
-          content: [{
-            type: 'text' as const,
-            text: '해당 시간대에 커밋이 없습니다',
-          }],
+          content: [
+            {
+              type: 'text' as const,
+              text: '해당 시간대에 커밋이 없습니다',
+            },
+          ],
         }
       }
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            error_message,
-            incident_time: timestamp,
-            candidate_commits: commits,
-            analysis: `인시던트 발생 ${window_hours}시간 이내 ${commits.length}개의 커밋을 발견했습니다. 가장 최근 커밋(${commits[0].sha})을 우선 확인하세요.`,
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                error_message,
+                incident_time: timestamp,
+                candidate_commits: commits,
+                analysis: `인시던트 발생 ${window_hours}시간 이내 ${commits.length}개의 커밋을 발견했습니다. 가장 최근 커밋(${commits[0].sha})을 우선 확인하세요.`,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       }
     },
   )
