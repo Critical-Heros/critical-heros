@@ -26,7 +26,8 @@
     "report": "c8 report --reporter=lcov --reporter=html",
     "coverage": "rimraf coverage && npm run test",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0 -n changelog-option.js",
-    "dev:web:ts": "cross-env NODE_ENV=local TRANSPORT=web tsx src/index.ts web"
+    "dev:web:ts": "cross-env NODE_ENV=local TRANSPORT=web tsx src/index.ts web",
+    "init:commits": "tsx scripts/init-commits.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1024.0",
@@ -38,6 +39,7 @@
     "dotenv": "^17.4.0",
     "fastify": "^5.8.4",
     "nanoid": "^5.1.6",
+    "openai": "^6.37.0",
     "pg": "^8.20.0",
     "yargs": "^17.7.2",
     "zod": "^3.25.76"

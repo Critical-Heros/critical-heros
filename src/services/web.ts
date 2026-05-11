@@ -7,6 +7,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
 import { createServer } from '@/services'
 import type { OptionsType } from '@/types'
 import { generateSessionId } from '@/utils'
+import { registerGithubWebhook } from '@/webhooks/github'
 
 export async function webServer(server: McpServer, options: OptionsType) {
   const app = Fastify({
@@ -95,6 +96,8 @@ export async function webServer(server: McpServer, options: OptionsType) {
       reply.status(400).send('No transport found for sessionId')
     }
   })
+// GitHub 웹훅 라우트 등록
+await registerGithubWebhook(app)
 
   app.listen({ port: options.port }, (err, address) => {
     if (err) {
