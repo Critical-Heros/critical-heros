@@ -97,9 +97,9 @@ export async function webServer(server: McpServer, options: OptionsType) {
       reply.status(400).send('No transport found for sessionId')
     }
   })
-// GitHub 웹훅 라우트 등록
-await registerGithubWebhook(app)
-await registerPrometheusWebhook(app)
+  // GitHub 웹훅 라우트 등록
+  await registerGithubWebhook(app)
+  await registerPrometheusWebhook(app)
 
   app.listen({ port: options.port }, (err, address) => {
     if (err) {

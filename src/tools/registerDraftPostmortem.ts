@@ -20,10 +20,7 @@ export default function register(server: McpServer, _options: OptionsType) {
       let incident: any = null
 
       try {
-        const result = await client.query(
-          'SELECT * FROM incidents WHERE incident_id = $1',
-          [incident_id]
-        )
+        const result = await client.query('SELECT * FROM incidents WHERE incident_id = $1', [incident_id])
         incident = result.rows[0]
       } finally {
         client.release()
@@ -48,7 +45,7 @@ export default function register(server: McpServer, _options: OptionsType) {
         format: 'JSONEachRow',
       })
 
-      const metrics = await metricResult.json() as any[]
+      const metrics = (await metricResult.json()) as any[]
 
       // Postmortem 초안 생성
       const postmortem = {
@@ -68,10 +65,12 @@ export default function register(server: McpServer, _options: OptionsType) {
       }
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify(postmortem, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(postmortem, null, 2),
+          },
+        ],
       }
     },
   )
