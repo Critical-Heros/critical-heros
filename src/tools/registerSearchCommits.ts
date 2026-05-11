@@ -39,7 +39,7 @@ export default function register(server: McpServer, _options: OptionsType) {
         format: 'JSONEachRow',
       })
 
-      const rows = await result.json() as any[]
+      const rows = (await result.json()) as any[]
 
       if (rows.length === 0) {
         return {
@@ -48,13 +48,19 @@ export default function register(server: McpServer, _options: OptionsType) {
       }
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            query,
-            results: rows,
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                query,
+                results: rows,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       }
     },
   )

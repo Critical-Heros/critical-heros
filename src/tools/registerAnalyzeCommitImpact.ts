@@ -27,7 +27,7 @@ export default function register(server: McpServer, _options: OptionsType) {
         format: 'JSONEachRow',
       })
 
-      const rows = await result.json() as any[]
+      const rows = (await result.json()) as any[]
 
       if (rows.length === 0) {
         return {
@@ -38,17 +38,23 @@ export default function register(server: McpServer, _options: OptionsType) {
       const commit = rows[0]
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            sha: commit.sha,
-            author: commit.author,
-            message: commit.message,
-            timestamp: commit.timestamp,
-            blast_radius_analysis: `커밋 ${sha.slice(0, 7)}의 변경사항을 분석했습니다. 관련 서비스 및 영향 범위를 확인하세요.`,
-            risk_score: 'MEDIUM',
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                sha: commit.sha,
+                author: commit.author,
+                message: commit.message,
+                timestamp: commit.timestamp,
+                blast_radius_analysis: `커밋 ${sha.slice(0, 7)}의 변경사항을 분석했습니다. 관련 서비스 및 영향 범위를 확인하세요.`,
+                risk_score: 'MEDIUM',
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       }
     },
   )

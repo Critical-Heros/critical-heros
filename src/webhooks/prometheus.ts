@@ -24,9 +24,7 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
         const client = await pool.connect()
         try {
           // 레포지토리 ID 가져오기 (일단 첫 번째 레포 사용)
-          const repoResult = await client.query(
-            'SELECT repository_id FROM repositories LIMIT 1'
-          )
+          const repoResult = await client.query('SELECT repository_id FROM repositories LIMIT 1')
 
           if (repoResult.rows.length > 0) {
             const repositoryId = repoResult.rows[0].repository_id
@@ -36,7 +34,7 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
               `INSERT INTO incidents (repository_id, title, status, created_at, updated_at)
                VALUES ($1, $2, 'OPEN', NOW(), NOW())
                ON CONFLICT DO NOTHING`,
-              [repositoryId, `[${alertName}] Prometheus Alert`]
+              [repositoryId, `[${alertName}] Prometheus Alert`],
             )
             console.log(`Incident created for alert: ${alertName}`)
           }
@@ -47,13 +45,15 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
         // 2. ClickHouse에 메트릭 스냅샷 저장
         await clickhouse.insert({
           table: 'metric_snapshots',
-          values: [{
-            incident_id: alertName,
-            metric_name: alertName,
-            value: 1.0,
-            labels,
-            captured_at: new Date(startsAt).toISOString().slice(0, 19).replace('T', ' '),
-          }],
+          values: [
+            {
+              incident_id: alertName,
+              metric_name: alertName,
+              value: 1.0,
+              labels,
+              captured_at: new Date(startsAt).toISOString().slice(0, 19).replace('T', ' '),
+            },
+          ],
           format: 'JSONEachRow',
         })
 
