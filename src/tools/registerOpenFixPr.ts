@@ -64,16 +64,22 @@ ${description}
       })
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: true,
-            pr_number: pr.number,
-            pr_url: pr.html_url,
-            branch: branch_name,
-            message: `PR #${pr.number}이 생성되었습니다.`,
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                success: true,
+                pr_number: pr.number,
+                pr_url: pr.html_url,
+                branch: branch_name,
+                message: `PR #${pr.number}이 생성되었습니다.`,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       }
     },
   )

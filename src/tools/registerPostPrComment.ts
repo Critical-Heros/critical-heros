@@ -50,15 +50,21 @@ ${impacted_files.map(f => `- \`${f}\``).join('\n')}
       })
 
       return {
-        content: [{
-          type: 'text' as const,
-          text: JSON.stringify({
-            success: true,
-            message: `PR #${pr_number}에 Blast Radius 분석 코멘트를 작성했습니다.`,
-            risk_score,
-            impacted_files_count: impacted_files.length,
-          }, null, 2),
-        }],
+        content: [
+          {
+            type: 'text' as const,
+            text: JSON.stringify(
+              {
+                success: true,
+                message: `PR #${pr_number}에 Blast Radius 분석 코멘트를 작성했습니다.`,
+                risk_score,
+                impacted_files_count: impacted_files.length,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
       }
     },
   )
