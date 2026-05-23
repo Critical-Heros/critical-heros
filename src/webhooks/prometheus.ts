@@ -24,9 +24,7 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
         let incidentId = alertName
 
         try {
-          const repoResult = await client.query(
-            'SELECT repository_id FROM repositories LIMIT 1',
-          )
+          const repoResult = await client.query('SELECT repository_id FROM repositories LIMIT 1')
 
           if (repoResult.rows.length > 0) {
             const repositoryId = repoResult.rows[0].repository_id
