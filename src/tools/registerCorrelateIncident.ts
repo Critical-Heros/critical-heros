@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import { clickhouse } from '@/db/clickhouse'
+import { generateEmbedding } from '@/indexer/embedder'
 import type { OptionsType } from '@/types'
 
 export default function register(server: McpServer, _options: OptionsType) {
@@ -17,19 +18,29 @@ export default function register(server: McpServer, _options: OptionsType) {
       },
     },
     async ({ repo_id, error_message, timestamp, window_hours }) => {
-      // 인시던트 발생 시각 기준으로 이전 커밋들 조회
+      // 에러 메시지를 벡터로 변환
+      const errorEmbedding = await generateEmbedding(error_message)
+
+      // 시간 범위 내 커밋 조회 + 임베딩 유사도 랭킹
       const result = await clickhouse.query({
         query: `
-          SELECT sha, author, message, timestamp, diff_s3_key
+          SELECT
+            sha,
+            author,
+            message,
+            timestamp,
+            diff_s3_key,
+            cosineDistance(embedding, {errorEmbedding: Array(Float32)}) AS similarity_score
           FROM commits
           WHERE repo_id = {repo_id: String}
-            AND timestamp BETWEEN 
+            AND timestamp BETWEEN
               parseDateTimeBestEffort({timestamp: String}) - INTERVAL {window_hours: Int32} HOUR
               AND parseDateTimeBestEffort({timestamp: String})
-          ORDER BY timestamp DESC
+            AND length(embedding) > 0
+          ORDER BY similarity_score ASC
           LIMIT 20
         `,
-        query_params: { repo_id, timestamp, window_hours },
+        query_params: { repo_id, timestamp, window_hours, errorEmbedding },
         format: 'JSONEachRow',
       })
 
@@ -55,7 +66,7 @@ export default function register(server: McpServer, _options: OptionsType) {
                 error_message,
                 incident_time: timestamp,
                 candidate_commits: commits,
-                analysis: `인시던트 발생 ${window_hours}시간 이내 ${commits.length}개의 커밋을 발견했습니다. 가장 최근 커밋(${commits[0].sha})을 우선 확인하세요.`,
+                analysis: `인시던트 발생 ${window_hours}시간 이내 ${commits.length}개의 커밋을 발견했습니다. 유사도 점수가 낮을수록 에러와 관련성이 높습니다. 가장 유사한 커밋(${commits[0].sha.slice(0, 7)})을 우선 확인하세요.`,
               },
               null,
               2,
