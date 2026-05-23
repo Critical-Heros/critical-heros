@@ -18,13 +18,13 @@ export default function register(server: McpServer, _options: OptionsType) {
     async ({ repo_id, from_date, to_date }) => {
       const result = await clickhouse.query({
         query: `
-          SELECT sha, author, message, timestamp
-          FROM commits
-          WHERE repo_id = {repo_id: String}
-            AND timestamp >= {from_date: String}
-            AND timestamp <= {to_date: String}
-          ORDER BY timestamp DESC
-        `,
+  SELECT sha, author, message, timestamp
+  FROM commits
+  WHERE repo_id = {repo_id: String}
+    AND timestamp >= parseDateTimeBestEffort({from_date: String})
+    AND timestamp <= parseDateTimeBestEffort({to_date: String}) + INTERVAL 1 DAY
+  ORDER BY timestamp DESC
+`,
         query_params: { repo_id, from_date, to_date },
         format: 'JSONEachRow',
       })
