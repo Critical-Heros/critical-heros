@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { clickhouse } from '@/db/clickhouse'
 import { embedCommit } from '@/indexer/embedder'
 import 'dotenv/config'
+import { Octokit } from '@octokit/rest'
 
 // GitHub 웹훅 서명 검증 함수
 function verifyGithubSignature(payload: string, signature: string): boolean {
@@ -61,10 +62,25 @@ export async function registerGithubWebhook(app: FastifyInstance) {
 
     console.log(`✅ Saved ${rows.length} commits to ClickHouse`)
 
-    // 5. 임베딩 생성 (비동기로 처리)
+    // 5. GitHub API로 diff 가져와서 임베딩 생성 (비동기로 처리)
+    const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN })
+    const [owner, repo] = repoId.split('/')
+
     for (const commit of commits) {
-      const diff = commit.added?.join('\n') + commit.modified?.join('\n') || ''
-      embedCommit(commit.id, repoId, commit.message, diff).catch(console.error)
+      ;(async () => {
+        try {
+          const { data: detail } = await octokit.repos.getCommit({
+            owner,
+            repo,
+            ref: commit.id,
+          })
+          const diff = detail.files?.map((f: any) => f.patch || '').join('\n') || ''
+          await embedCommit(commit.id, repoId, commit.message, diff)
+          console.log(`Embedded commit ${commit.id}`)
+        } catch (err) {
+          console.error(`Failed to embed commit ${commit.id}:`, err)
+        }
+      })()
     }
 
     return reply.status(200).send({ message: `Processed ${rows.length} commits` })
