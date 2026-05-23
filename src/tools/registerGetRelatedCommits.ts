@@ -16,15 +16,20 @@ export default function register(server: McpServer, _options: OptionsType) {
       },
     },
     async ({ file_paths, repo_id, limit }) => {
+      const filePatternsCondition = file_paths.map((_, i) => `message LIKE {pattern_${i}: String}`).join(' OR ')
+
+      const patternParams = Object.fromEntries(file_paths.map((fp, i) => [`pattern_${i}`, `%${fp}%`]))
+
       const result = await clickhouse.query({
         query: `
           SELECT sha, author, message, timestamp
           FROM commits
           WHERE repo_id = {repo_id: String}
+            AND (${filePatternsCondition})
           ORDER BY timestamp DESC
           LIMIT {limit: Int32}
         `,
-        query_params: { repo_id, limit },
+        query_params: { repo_id, limit, ...patternParams },
         format: 'JSONEachRow',
       })
 
