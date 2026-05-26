@@ -2,6 +2,7 @@
 import yargs, { type ArgumentsCamelCase } from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { startStdioServer, startWebServer } from './services'
+import { startSlackServer } from './slack'
 import { getOptions } from './utils'
 import 'dotenv/config'
 import pkg from '../package.json' with { type: 'json' }
@@ -22,6 +23,12 @@ const argv = await yargs()
     'Start the web server transport protocol.',
     () => {},
     argv => startServer('web', argv),
+  )
+  .command(
+    'slack',
+    'Start the Slack bot server (HTTP mode).',
+    () => {},
+    () => startSlackServer().catch(console.error),
   )
   .options({
     port: {
