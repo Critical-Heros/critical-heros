@@ -1,6 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { OptionsType } from '@/types'
-import registerGetData from './registerGetData'
 import registerGetRecentCommits from './registerGetRecentCommits'
 import registerGetCommitDiff from './registerGetCommitDiff'
 import registerCorrelateIncident from './registerCorrelateIncident'
@@ -9,9 +8,11 @@ import registerSearchCommits from './registerSearchCommits'
 import registerDraftPostmortem from './registerDraftPostmortem'
 import registerPostPrComment from './registerPostPrComment'
 import registerOpenFixPr from './registerOpenFixPr'
+import registerGetRelatedCommits from './registerGetRelatedCommits'
+import registerGetChangeTimeline from './registerGetChangeTimeline'
+import registerSummarizeChanges from './registerSummarizeChanges'
 
 export const registerTools = (server: McpServer, options: OptionsType) => {
-  registerGetData(server, options)
   registerGetRecentCommits(server, options)
   registerGetCommitDiff(server, options)
   registerCorrelateIncident(server, options)
@@ -20,4 +21,7 @@ export const registerTools = (server: McpServer, options: OptionsType) => {
   registerDraftPostmortem(server, options)
   registerPostPrComment(server, options)
   registerOpenFixPr(server, options)
+  registerGetRelatedCommits(server, options)
+  registerGetChangeTimeline(server, options)
+  registerSummarizeChanges(server, options)
 }

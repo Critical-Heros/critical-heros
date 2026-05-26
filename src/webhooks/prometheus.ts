@@ -13,41 +13,45 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
 
     for (const alert of alerts) {
       const alertName = alert.labels?.alertname || 'unknown'
-      const status = alert.status // firing or resolved
+      const status = alert.status
       const startsAt = alert.startsAt
       const labels = JSON.stringify(alert.labels || {})
 
       console.log(`Alert: ${alertName} - ${status}`)
 
-      // 1. PostgreSQL에 인시던트 생성 (firing일 때만)
       if (status === 'firing') {
         const client = await pool.connect()
+        let incidentId = alertName
+
         try {
-          // 레포지토리 ID 가져오기 (일단 첫 번째 레포 사용)
           const repoResult = await client.query('SELECT repository_id FROM repositories LIMIT 1')
 
           if (repoResult.rows.length > 0) {
             const repositoryId = repoResult.rows[0].repository_id
 
-            // 인시던트 생성
-            await client.query(
+            // 인시던트 생성 후 incident_id 반환
+            const incidentResult = await client.query(
               `INSERT INTO incidents (repository_id, title, status, created_at, updated_at)
                VALUES ($1, $2, 'OPEN', NOW(), NOW())
-               ON CONFLICT DO NOTHING`,
+               ON CONFLICT DO NOTHING
+               RETURNING incident_id`,
               [repositoryId, `[${alertName}] Prometheus Alert`],
             )
-            console.log(`Incident created for alert: ${alertName}`)
+
+            // 실제 UUID 사용, 없으면 alertName 폴백
+            incidentId = incidentResult.rows[0]?.incident_id ?? alertName
+            console.log(`Incident created: ${incidentId}`)
           }
         } finally {
           client.release()
         }
 
-        // 2. ClickHouse에 메트릭 스냅샷 저장
+        // ClickHouse에 메트릭 스냅샷 저장 (실제 incident_id로)
         await clickhouse.insert({
           table: 'metric_snapshots',
           values: [
             {
-              incident_id: alertName,
+              incident_id: incidentId,
               metric_name: alertName,
               value: 1.0,
               labels,
