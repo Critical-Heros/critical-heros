@@ -1,0 +1,99 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { callMcpTool, createMcpClient } from './mcpClient'
+import 'dotenv/config'
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const SYSTEM_PROMPT = `당신은 Critical Hero입니다. 프로덕션 인시던트를 분석하는 인텔리전스 어시스턴트입니다.
+커밋 히스토리와 코드 변경 이력을 분석하여 엔지니어가 장애 원인을 빠르게 파악하도록 돕습니다.
+
+인시던트 분석 시 반드시 다음을 포함하세요:
+1. 타이밍과 내용을 기반으로 가장 유력한 원인 커밋 식별
+2. 해당 커밋이 무엇을 변경했고 왜 이슈를 유발할 수 있는지 설명
+3. 즉각적인 완화 방법 제안
+
+Slack 응답은 간결하게 유지하세요 (불릿 포인트 사용, 섹션당 800자 이내).
+항상 한국어로 답변하세요.`
+
+export interface AgentResponse {
+  text: string
+  toolsUsed: string[]
+}
+
+export interface AgentContext {
+  incidentTime?: string
+  threadHistory?: Array<{ role: 'user' | 'assistant'; text: string }>
+}
+
+export async function runIncidentAgent(
+  userQuery: string,
+  repoId: string,
+  context: AgentContext = {},
+): Promise<AgentResponse> {
+  const mcpClient = await createMcpClient()
+
+  try {
+    // MCP 서버에서 사용 가능한 툴 목록 가져오기
+    const { tools: mcpTools } = await mcpClient.listTools()
+
+    const tools: Anthropic.Tool[] = mcpTools.map(t => ({
+      name: t.name,
+      description: t.description ?? '',
+      input_schema: t.inputSchema as Anthropic.Tool['input_schema'],
+    }))
+
+    const userContent = [
+      `레포지토리: ${repoId}`,
+      context.incidentTime ? `인시던트 발생 시각: ${context.incidentTime}` : null,
+      `질문: ${userQuery}`,
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const messages: Anthropic.MessageParam[] = [
+      ...(context.threadHistory?.map(m => ({ role: m.role, content: m.text })) ?? []),
+      { role: 'user', content: userContent },
+    ]
+
+    const toolsUsed: string[] = []
+
+    while (true) {
+      const response = await anthropic.messages.create({
+        model: process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        tools,
+        messages,
+      })
+
+      if (response.stop_reason === 'end_turn') {
+        const textBlock = response.content.find(c => c.type === 'text')
+        return {
+          text: textBlock?.type === 'text' ? textBlock.text : '분석 결과를 생성하지 못했습니다.',
+          toolsUsed,
+        }
+      }
+
+      if (response.stop_reason === 'tool_use') {
+        messages.push({ role: 'assistant', content: response.content })
+
+        const toolResults: Anthropic.ToolResultBlockParam[] = []
+        for (const block of response.content) {
+          if (block.type !== 'tool_use') continue
+          toolsUsed.push(block.name)
+          // MCP 서버를 통해 툴 실행
+          const result = await callMcpTool(mcpClient, block.name, block.input as Record<string, unknown>)
+          toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: result })
+        }
+
+        messages.push({ role: 'user', content: toolResults })
+      } else {
+        break
+      }
+    }
+
+    return { text: '분석이 완료되지 않았습니다.', toolsUsed }
+  } finally {
+    await mcpClient.close()
+  }
+}
