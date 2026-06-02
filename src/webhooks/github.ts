@@ -1,9 +1,34 @@
-import type { FastifyInstance } from 'fastify'
 import crypto from 'crypto'
+import type { FastifyInstance } from 'fastify'
+import { triggerPrReview } from '@/agent/triggerPrReview'
 import { clickhouse } from '@/db/clickhouse'
 import { embedCommit } from '@/indexer/embedder'
 import 'dotenv/config'
 import { Octokit } from '@octokit/rest'
+
+interface GithubCommit {
+  id: string
+  author?: { name?: string }
+  message: string
+  timestamp: string
+}
+
+interface GithubWebhookBody {
+  action?: string
+  commits?: GithubCommit[]
+  pull_request?: {
+    number: number
+    title: string
+    merged: boolean
+    merge_commit_sha: string
+    user?: { login?: string; email?: string | null }
+  }
+  repository?: {
+    full_name: string
+    name: string
+    owner?: { login: string }
+  }
+}
 
 // GitHub 웹훅 서명 검증 함수
 function verifyGithubSignature(payload: string, signature: string): boolean {
@@ -26,16 +51,42 @@ export async function registerGithubWebhook(app: FastifyInstance) {
       return reply.status(401).send({ error: 'Invalid signature' })
     }
 
-    // 2. push 이벤트인지 확인
+    // 2. 이벤트 종류 분기
     const event = request.headers['x-github-event'] as string
+    const body = request.body as GithubWebhookBody
+
+    // pull_request (merged) 이벤트 처리
+    if (event === 'pull_request') {
+      const pr = body.pull_request
+      if (body.action !== 'closed' || !pr?.merged) {
+        return reply.status(200).send({ message: 'Ignored PR event' })
+      }
+
+      const owner = body.repository?.owner?.login ?? ''
+      const repo = body.repository?.name ?? ''
+      const repoId = body.repository?.full_name ?? ''
+
+      triggerPrReview({
+        owner,
+        repo,
+        repoId,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        mergeCommitSha: pr.merge_commit_sha,
+        authorLogin: pr.user?.login ?? 'unknown',
+        authorEmail: pr.user?.email ?? undefined,
+      }).catch((err: unknown) => console.error('[webhook/github] PR review trigger 실패:', err))
+
+      return reply.status(200).send({ message: `PR #${pr.number} review triggered` })
+    }
+
     if (event !== 'push') {
       return reply.status(200).send({ message: `Ignored event: ${event}` })
     }
 
     // 3. 커밋 데이터 파싱
-    const body = request.body as any
-    const repoId = body.repository?.full_name
-    const commits = body.commits || []
+    const repoId = body.repository?.full_name ?? ''
+    const commits = body.commits ?? []
 
     if (commits.length === 0) {
       return reply.status(200).send({ message: 'No commits' })
@@ -44,7 +95,7 @@ export async function registerGithubWebhook(app: FastifyInstance) {
     console.log(`📦 Received ${commits.length} commits from ${repoId}`)
 
     // 4. ClickHouse에 커밋 저장
-    const rows = commits.map((commit: any) => ({
+    const rows = commits.map((commit: GithubCommit) => ({
       sha: commit.id,
       repo_id: repoId,
       author: commit.author?.name || 'unknown',
@@ -74,7 +125,7 @@ export async function registerGithubWebhook(app: FastifyInstance) {
             repo,
             ref: commit.id,
           })
-          const diff = detail.files?.map((f: any) => f.patch || '').join('\n') || ''
+          const diff = detail.files?.map((f: { patch?: string }) => f.patch ?? '').join('\n') ?? ''
           await embedCommit(commit.id, repoId, commit.message, diff)
           console.log(`Embedded commit ${commit.id}`)
         } catch (err) {
