@@ -1,5 +1,6 @@
 import type { App } from '@slack/bolt'
 import { type AgentContext, runAgent } from '@/agent/router'
+import { toSlackMrkdwn } from '@/utils'
 
 // 스레드별 대화 히스토리 (멀티턴 컨텍스트)
 const threadHistory = new Map<string, Array<{ role: 'user' | 'assistant'; text: string }>>()
@@ -32,6 +33,7 @@ export function registerMentionHandler(app: App): void {
 
     try {
       const result = await runAgent(query, repoId, context)
+      const formatted = toSlackMrkdwn(result.text)
 
       // 대화 히스토리 업데이트
       history.push({ role: 'user', text: query })
@@ -43,10 +45,10 @@ export function registerMentionHandler(app: App): void {
         await client.chat.update({
           channel: event.channel,
           ts: thinkingResult.ts as string,
-          text: result.text,
+          text: formatted,
         })
       } else {
-        await say({ text: result.text, thread_ts: event.ts })
+        await say({ text: formatted, thread_ts: event.ts })
       }
     } catch (error) {
       console.error('[Slack] mention handler error:', error)
