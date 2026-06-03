@@ -97,11 +97,14 @@ export async function webServer(server: McpServer, options: OptionsType) {
       reply.status(400).send('No transport found for sessionId')
     }
   })
+  // Health check for k8s liveness/readiness probes
+  app.get('/health', async () => ({ status: 'ok' }))
+
   // GitHub 웹훅 라우트 등록
   await registerGithubWebhook(app)
   await registerPrometheusWebhook(app)
 
-  app.listen({ port: options.port }, (err, address) => {
+  app.listen({ port: options.port, host: '0.0.0.0' }, (err, address) => {
     if (err) {
       app.log.error(err)
       process.exit(1)

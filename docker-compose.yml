@@ -1,3 +1,4 @@
+# Dev stack — local Postgres + ClickHouse for `npm run dev:*` (see .env.dev.example).
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
