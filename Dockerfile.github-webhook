@@ -1,0 +1,18 @@
+# GitHub webhook ingestion Lambda (container image).
+FROM public.ecr.aws/lambda/nodejs:22 AS build
+WORKDIR /build
+ENV HUSKY=0
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
+COPY tsconfig.json ./
+COPY src ./src
+# Bundle just this handler; deps stay external and load from node_modules.
+RUN npx esbuild src/lambda/github.ts --bundle --platform=node --format=esm --packages=external --alias:@=./src --outfile=github.js
+RUN npm prune --omit=dev --legacy-peer-deps
+
+FROM public.ecr.aws/lambda/nodejs:22
+ENV NODE_ENV=production
+COPY --from=build /build/github.js ${LAMBDA_TASK_ROOT}/github.js
+COPY --from=build /build/node_modules ${LAMBDA_TASK_ROOT}/node_modules
+COPY --from=build /build/package.json ${LAMBDA_TASK_ROOT}/package.json
+CMD ["github.handler"]
