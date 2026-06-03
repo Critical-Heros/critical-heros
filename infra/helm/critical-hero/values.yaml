@@ -35,8 +35,8 @@ global:
 mcp-server:
   replicaCount: 1
   image:
-    repository: "" # <ecr>/eeeemune/mcp-server, set by CD
-    tag: latest
+    repository: "" # <ecr>/eeeemune/critical-hero, set by CD
+    tag: mcp-server
     pullPolicy: Always
   service:
     type: LoadBalancer
@@ -53,8 +53,8 @@ mcp-server:
 slack:
   replicaCount: 1
   image:
-    repository: "" # <ecr>/eeeemune/slack, set by CD
-    tag: latest
+    repository: "" # <ecr>/eeeemune/critical-hero, set by CD
+    tag: slack
     pullPolicy: Always
   resources:
     requests:

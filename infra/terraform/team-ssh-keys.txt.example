@@ -1,0 +1,5 @@
+# Copy to team-ssh-keys.txt (gitignored) and add one SSH public key per line.
+# These get appended to the k3s node's ubuntu authorized_keys at boot.
+# ssh-ed25519 AAAA... eunhye
+# ssh-ed25519 AAAA... haewon
+# ssh-ed25519 AAAA... eunbie
