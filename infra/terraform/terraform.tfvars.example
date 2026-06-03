@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars to override defaults. All values are optional.
+# Secrets/config are NOT here: they live in SSM Parameter Store under ssm_prefix,
+# managed out-of-band (see infra/README.md).
+
+# aws_region        = "ap-northeast-2"
+# project_name      = "critical-hero"
+# org_name          = "eeeemune"
+# ec2_instance_type = "t3.xlarge"
+# ssm_prefix        = "/critical-hero"
