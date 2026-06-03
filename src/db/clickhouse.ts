@@ -1,8 +1,14 @@
 import { createClient } from '@clickhouse/client'
 import 'dotenv/config'
 
+// Use CLICKHOUSE_HOST as-is if it already has a scheme (prod ClickHouse Cloud is https),
+// otherwise default to http (dev/local).
+const host = process.env.CLICKHOUSE_HOST ?? 'localhost'
+const port = process.env.CLICKHOUSE_PORT ?? '8123'
+const clickhouseUrl = `${host.includes('://') ? host : `http://${host}`}:${port}`
+
 export const clickhouse = createClient({
-  url: `http://${process.env.CLICKHOUSE_HOST}:${process.env.CLICKHOUSE_PORT}`,
+  url: clickhouseUrl,
   database: process.env.CLICKHOUSE_DB,
   username: process.env.CLICKHOUSE_USER,
   password: process.env.CLICKHOUSE_PASSWORD ?? '',
