@@ -4,3 +4,15 @@ description: Critical Heros incident intelligence MCP server
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
+
+dependencies:
+  - name: mcp-server
+    version: "0.1.0"
+    repository: "file://charts/mcp-server"
+  - name: slack
+    version: "0.1.0"
+    repository: "file://charts/slack"
+  - name: db
+    version: "0.1.0"
+    repository: "file://charts/db"
+

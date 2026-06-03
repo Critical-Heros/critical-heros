@@ -1,0 +1,8 @@
+# Defaults; overridden by the parent chart's `db:` and `global:` sections.
+postgres:
+  enabled: true
+  image: postgres:15
+  storage: 5Gi
+
+clickhouse:
+  initSchema: true

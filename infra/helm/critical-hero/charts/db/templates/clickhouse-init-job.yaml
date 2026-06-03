@@ -1,0 +1,36 @@
+{{- if .Values.clickhouse.initSchema }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: clickhouse-init-schema
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init-schema
+          image: curlimages/curl:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              CH_URL="{{ .Values.global.clickhouse.host }}:{{ .Values.global.clickhouse.port }}"
+              CH_USER="{{ .Values.global.clickhouse.user }}"
+              CH_PASS="{{ .Values.global.clickhouse.password }}"
+              CH_DB="{{ .Values.global.clickhouse.db }}"
+              run_query() {
+                curl -sf "$CH_URL/" \
+                  -H "X-ClickHouse-User: $CH_USER" \
+                  -H "X-ClickHouse-Key: $CH_PASS" \
+                  --data-binary "$1"
+              }
+              run_query "CREATE DATABASE IF NOT EXISTS $CH_DB"
+              run_query "CREATE TABLE IF NOT EXISTS $CH_DB.commits (sha String, repo_id String, author String, message String, timestamp DateTime, diff_s3_key String, embedding Array(Float32), created_at DateTime DEFAULT now()) ENGINE = MergeTree() ORDER BY (repo_id, timestamp)"
+              run_query "CREATE TABLE IF NOT EXISTS $CH_DB.metric_snapshots (incident_id String, metric_name String, value Float64, labels String, captured_at DateTime, created_at DateTime DEFAULT now()) ENGINE = MergeTree() ORDER BY (incident_id, captured_at)"
+              run_query "CREATE TABLE IF NOT EXISTS $CH_DB.slack_threads (thread_ts String, channel_id String, user_id String, message String, incident_id Nullable(String), posted_at DateTime, created_at DateTime DEFAULT now()) ENGINE = MergeTree() ORDER BY (channel_id, posted_at)"
+              echo "ClickHouse schema initialized"
+{{- end }}
