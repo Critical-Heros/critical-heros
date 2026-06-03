@@ -123,5 +123,5 @@ infra/terraform/.terraform/
 !*.tfvars.example
 infra/terraform/team-ssh-keys.txt
 
-# Helm — real secret values (keep values-secret.yaml.example)
-infra/helm/cmcp/values-secret.yaml
+# Helm real secret values (keep values-secret.yaml.example)
+infra/helm/*/values-secret.yaml

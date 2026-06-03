@@ -1,0 +1,73 @@
+# Shared config consumed by every subchart. Real secret values go in
+# values-secret.yaml (gitignored); copy values-secret.yaml.example to start.
+global:
+  # ClickHouse (external ClickHouse Cloud in prod; include the scheme in host)
+  clickhouse:
+    host: "" # e.g. https://xxx.ap-northeast-2.aws.clickhouse.cloud
+    port: "8443"
+    db: critical_hero
+    user: default
+    password: ""
+  # Postgres (in-cluster service from the db subchart)
+  postgres:
+    host: critical-hero-postgres
+    port: "5432"
+    db: critical_hero
+    user: postgres
+    password: ""
+  agentProvider: claude
+  anthropicApiKey: ""
+  claudeModel: claude-sonnet-4-6
+  openaiApiKey: ""
+  openaiModel: text-embedding-3-small
+  githubToken: ""
+  githubWebhookSecret: ""
+  notionToken: ""
+  notionDatabaseId: ""
+  slackBotToken: ""
+  slackSigningSecret: ""
+  slackAppToken: ""
+  slackSocketMode: "true"
+  slackCriticalChannel: "#critical"
+  slackIncidentChannels: "#incidents"
+  defaultRepoId: ""
+
+mcp-server:
+  replicaCount: 1
+  image:
+    repository: "" # <ecr>/eeeemune/mcp-server, set by CD
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: LoadBalancer
+    port: 8401
+    certificateArn: "" # AWS ACM cert ARN for TLS termination on 443
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+slack:
+  replicaCount: 1
+  image:
+    repository: "" # <ecr>/eeeemune/slack, set by CD
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+db:
+  postgres:
+    enabled: true
+    image: postgres:15
+    storage: 5Gi
+  clickhouse:
+    initSchema: true

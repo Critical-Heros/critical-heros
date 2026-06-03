@@ -1,0 +1,61 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: critical-hero-postgres
+  namespace: {{ .Release.Namespace }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.postgres.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: critical-hero-postgres
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: critical-hero-postgres
+  template:
+    metadata:
+      labels:
+        app: critical-hero-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.global.postgres.user | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.global.postgres.password | quote }}
+            - name: POSTGRES_DB
+              value: {{ .Values.global.postgres.db | quote }}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: critical-hero-postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: critical-hero-postgres
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: critical-hero-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+{{- end }}

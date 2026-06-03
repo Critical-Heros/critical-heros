@@ -1,0 +1,6 @@
+apiVersion: v2
+name: db
+description: Critical Heros database provisioning and schema init
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
