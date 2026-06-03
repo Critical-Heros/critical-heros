@@ -1,0 +1,6 @@
+apiVersion: v2
+name: slack
+description: Critical Heros Slack bot (Bolt, Socket Mode)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
