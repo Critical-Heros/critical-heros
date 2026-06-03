@@ -1,0 +1,90 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPO: eeeemune/critical-hero
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { service: mcp-server, dockerfile: Dockerfile.mcp-server }
+          - { service: slack, dockerfile: Dockerfile.slack }
+          - { service: github-webhook, dockerfile: Dockerfile.github-webhook }
+          - { service: slack-handler, dockerfile: Dockerfile.slack-handler }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push ${{ matrix.service }}
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMG="$REGISTRY/$ECR_REPO"
+          docker build -f ${{ matrix.dockerfile }} \
+            -t "$IMG:${{ matrix.service }}" \
+            -t "$IMG:${{ matrix.service }}-${{ github.sha }}" .
+          docker push "$IMG:${{ matrix.service }}"
+          docker push "$IMG:${{ matrix.service }}-${{ github.sha }}"
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: azure/setup-helm@v4
+
+      - name: Configure cluster + secret values
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > ~/.kube/config
+          printf '%s' "${{ secrets.HELM_VALUES_SECRET }}" > /tmp/values-secret.yaml
+
+      - name: Deploy mcp-server + slack to k3s
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMG="$REGISTRY/$ECR_REPO"
+          helm upgrade --install critical-hero infra/helm/critical-hero \
+            --namespace critical-hero --create-namespace \
+            -f /tmp/values-secret.yaml \
+            --set mcp-server.image.repository="$IMG" \
+            --set mcp-server.image.tag="mcp-server-${{ github.sha }}" \
+            --set slack.image.repository="$IMG" \
+            --set slack.image.tag="slack-${{ github.sha }}" \
+            --wait
+
+      - name: Update lambda images
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMG="$REGISTRY/$ECR_REPO"
+          aws lambda update-function-code --function-name critical-hero-github-webhook \
+            --image-uri "$IMG:github-webhook-${{ github.sha }}"
+          aws lambda update-function-code --function-name critical-hero-slack-handler \
+            --image-uri "$IMG:slack-handler-${{ github.sha }}"
