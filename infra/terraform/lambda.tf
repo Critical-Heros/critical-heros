@@ -15,28 +15,24 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# Read config/secrets from SSM Parameter Store under the prefix (params managed out-of-band).
-resource "aws_iam_role_policy" "lambda_ssm" {
-  name = "${var.project_name}-lambda-ssm"
-  role = aws_iam_role.lambda.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect   = "Allow"
-        Action   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
-        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${var.ssm_prefix}/*"
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["kms:Decrypt"]
-        Resource = "*"
-      }
-    ]
-  })
+# Read every parameter under ssm_prefix (managed out-of-band) at apply time
+# and inject them all into the lambdas' environment. Param name's last segment
+# becomes the env var, e.g. /critical-hero/CLICKHOUSE_HOST -> CLICKHOUSE_HOST.
+data "aws_ssm_parameters_by_path" "all" {
+  path            = var.ssm_prefix
+  recursive       = true
+  with_decryption = true
 }
 
 locals {
+  lambda_env = merge(
+    {
+      for i, name in data.aws_ssm_parameters_by_path.all.names :
+      element(split("/", name), length(split("/", name)) - 1) => data.aws_ssm_parameters_by_path.all.values[i]
+    },
+    { NODE_ENV = "production" },
+  )
+
   # function key -> image tag in the shared ECR repo
   lambda_functions = {
     github-webhook = "github-webhook"
@@ -55,10 +51,7 @@ resource "aws_lambda_function" "fn" {
   memory_size   = 512
 
   environment {
-    variables = {
-      NODE_ENV   = "production"
-      SSM_PREFIX = var.ssm_prefix
-    }
+    variables = local.lambda_env
   }
 }
 
