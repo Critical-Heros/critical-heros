@@ -1,42 +1,24 @@
 import { describe, expect, test } from 'vitest'
 
-describe('getDataTool', () => {
-  test('returns data for a valid input', async () => {
-    expect(
-      await global.client.callTool({
-        name: 'GetData',
-        arguments: {
-          keyword: 'test',
-        },
-      }),
-    ).toStrictEqual({
-      content: [{ type: 'text', text: 'keyword: test;' }],
-    })
-  })
+describe('registerTools', () => {
+  test('registers the expected incident-intelligence tools', async () => {
+    const { tools } = await global.client.listTools()
+    const names = tools.map(tool => tool.name)
 
-  test('returns a "not found" response for an unrecognized input', async () => {
-    expect(
-      await global.client.callTool({
-        name: 'GetData',
-        arguments: {
-          keyword: 'error',
-        },
-      }),
-    ).toStrictEqual({
-      content: [{ type: 'text', text: 'not found' }],
-    })
-  })
-
-  test('returns a "not found" response for empty input', async () => {
-    expect(
-      await global.client.callTool({
-        name: 'GetData',
-        arguments: {
-          keyword: '',
-        },
-      }),
-    ).toStrictEqual({
-      content: [{ type: 'text', text: 'not found' }],
-    })
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'get_recent_commits',
+        'get_commit_diff',
+        'correlate_incident',
+        'analyze_commit_impact',
+        'search_commits',
+        'draft_postmortem',
+        'post_pr_comment',
+        'open_fix_pr',
+        'get_related_commits',
+        'get_change_timeline',
+        'summarize_changes',
+      ]),
+    )
   })
 })
