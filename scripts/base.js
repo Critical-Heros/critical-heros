@@ -20,7 +20,9 @@ export const config = {
   sourcemap: isDev,
   minify: isProd,
   platform: 'node',
-  external: ['yargs', 'fastify', '@fastify/cors', 'nanoid', 'zod', 'dotenv', '@modelcontextprotocol/sdk', '@clickhouse/client', 'pg', '@aws-sdk/client-s3', '@octokit/rest'],
+  // Externalize all node_modules deps; they load from node_modules at runtime.
+  // Bundling them breaks packages that do dynamic require() (e.g. @slack/bolt -> "Dynamic require of node:os").
+  packages: 'external',
   alias: {
     '@': path.resolve(dirname, '../src'),
   },
