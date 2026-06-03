@@ -1,0 +1,16 @@
+node_modules
+build
+.git
+.github
+.env
+.env.*
+!.env.*.example
+coverage
+tests
+vitest.config.ts
+vitest.setup.ts
+infra
+Dockerfile*
+.dockerignore
+*.md
+.DS_Store
