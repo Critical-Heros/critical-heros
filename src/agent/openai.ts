@@ -3,7 +3,15 @@ import type { AgentContext, AgentResponse } from './claude'
 import { callMcpTool, createMcpClient } from './mcpClient'
 import 'dotenv/config'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+// Lazily construct the OpenAI client so importing this module doesn't require
+// OPENAI_API_KEY at boot (the SDK throws on a missing key at construction).
+let openaiClient: OpenAI | undefined
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
+  return openaiClient
+}
 
 const SYSTEM_PROMPT = `당신은 Critical Hero입니다. 프로덕션 인시던트를 분석하는 인텔리전스 어시스턴트입니다.
 커밋 히스토리와 코드 변경 이력을 분석하여 엔지니어가 장애 원인을 빠르게 파악하도록 돕습니다.
@@ -53,7 +61,7 @@ export async function runIncidentAgentOpenAI(
     const toolsUsed: string[] = []
 
     while (true) {
-      const response = await openai.chat.completions.create({
+      const response = await getOpenAI().chat.completions.create({
         model: process.env.OPENAI_MODEL ?? 'gpt-4o',
         max_tokens: 1024,
         tools,

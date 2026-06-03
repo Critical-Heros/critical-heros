@@ -2,13 +2,19 @@ import OpenAI from 'openai'
 import { clickhouse } from '@/db/clickhouse'
 import 'dotenv/config'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+// Lazily construct the OpenAI client so importing this module doesn't require
+// OPENAI_API_KEY at boot (the SDK throws on a missing key at construction).
+let openaiClient: OpenAI | undefined
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  }
+  return openaiClient
+}
 
-// 텍스트를 벡터로 변환
+// Convert text into an embedding vector
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
   })
