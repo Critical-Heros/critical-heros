@@ -73,7 +73,7 @@ export async function runIncidentAgentOpenAI(
     while (true) {
       const response = await getOpenAI().chat.completions.create({
         model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-        max_tokens: 1024,
+        max_tokens: 4096,
         tools,
         messages,
       })
@@ -99,7 +99,9 @@ export async function runIncidentAgentOpenAI(
           messages.push({ role: 'tool', tool_call_id: toolCall.id, content: result })
         }
       } else {
-        break
+        // e.g. finish_reason === 'length' - log it and return whatever text we have.
+        console.error(`[openai] unexpected finish_reason: ${choice.finish_reason}, toolsUsed: ${toolsUsed.join(',')}`)
+        return { text: choice.message.content ?? '분석이 완료되지 않았습니다.', toolsUsed }
       }
     }
 
