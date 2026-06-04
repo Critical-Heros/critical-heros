@@ -13,13 +13,17 @@ export default function register(server: McpServer, _options: OptionsType) {
       inputSchema: {
         owner: z.string().describe('GitHub 레포 소유자'),
         repo: z.string().describe('레포지토리 이름'),
+        files: z
+          .array(z.object({ path: z.string(), content: z.string() }))
+          .min(1)
+          .describe('수정/추가할 파일들. content는 파일 전체 내용. read_repo_file로 읽어 수정한 결과를 넣으세요'),
         branch_name: z.string().optional().describe('생성할 브랜치 이름 (생략 시 자동 생성)'),
         description: z.string().optional().describe('PR 설명 (생략 시 분석 내용으로 채움)'),
         incident_id: z.string().optional().describe('관련 인시던트 ID (있으면)'),
         base_branch: z.string().default('main').describe('베이스 브랜치 (기본: main)'),
       },
     },
-    async ({ owner, repo, branch_name, description, incident_id, base_branch }) => {
+    async ({ owner, repo, files, branch_name, description, incident_id, base_branch }) => {
       // Generate sensible defaults so the agent never has to ask the user for these.
       const incident = incident_id ?? 'N/A'
       const branch =
@@ -51,7 +55,31 @@ export default function register(server: McpServer, _options: OptionsType) {
         sha: baseSha,
       })
 
-      // 3. PR 생성
+      // 3. 파일 커밋 (브랜치에 실제 diff가 있어야 PR을 열 수 있음)
+      for (const file of files) {
+        // Existing files need their current blob sha to update; new files have none.
+        let sha: string | undefined
+        try {
+          const existing = await octokit.repos.getContent({ owner, repo, path: file.path, ref: branch })
+          if (!Array.isArray(existing.data) && existing.data.type === 'file') {
+            sha = existing.data.sha
+          }
+        } catch {
+          // File doesn't exist yet - creating it.
+        }
+
+        await octokit.repos.createOrUpdateFileContents({
+          owner,
+          repo,
+          path: file.path,
+          branch,
+          message: `[Critical Hero] fix: ${file.path}`,
+          content: Buffer.from(file.content, 'utf8').toString('base64'),
+          sha,
+        })
+      }
+
+      // 4. PR 생성
       const { data: pr } = await octokit.pulls.create({
         owner,
         repo,
