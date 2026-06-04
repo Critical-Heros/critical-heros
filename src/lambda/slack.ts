@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import { WebClient } from '@slack/web-api'
 import { runAgent } from '@/agent/router'
+import { approveKnowledge, denyKnowledge } from '@/indexer/knowledge'
 import { ingestSlackMessage } from '@/slack/handlers/message'
 import { toSlackMrkdwn } from '@/utils'
 
@@ -117,12 +118,82 @@ async function handleMention(ev: SlackEvent): Promise<void> {
   }
 }
 
+interface BlockActionsPayload {
+  type?: string
+  actions?: Array<{ action_id?: string; value?: string }>
+  channel?: { id?: string }
+  message?: { ts?: string }
+}
+
+// Handle the Approve/Deny buttons posted by save_knowledge. On approve the pending recipe
+// becomes searchable; on deny it's discarded. Either way we edit the message to show the result.
+async function handleInteractivity(rawBody: string): Promise<LambdaResponse> {
+  const payloadStr = new URLSearchParams(rawBody).get('payload')
+  if (!payloadStr) return ok()
+
+  let payload: BlockActionsPayload
+  try {
+    payload = JSON.parse(payloadStr)
+  } catch {
+    return {
+      statusCode: 400,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ error: 'Invalid payload' }),
+    }
+  }
+
+  if (payload.type !== 'block_actions') return ok()
+
+  const action = payload.actions?.[0]
+  if (!action?.value || (action.action_id !== 'approve_knowledge' && action.action_id !== 'deny_knowledge')) {
+    return ok()
+  }
+
+  let id: string
+  let repoId: string
+  try {
+    const parsed = JSON.parse(action.value) as { id: string; repo_id: string }
+    id = parsed.id
+    repoId = parsed.repo_id
+  } catch {
+    return ok()
+  }
+
+  const approved = action.action_id === 'approve_knowledge'
+  try {
+    if (approved) await approveKnowledge(id, repoId)
+    else await denyKnowledge(id, repoId)
+  } catch (err) {
+    console.error('[lambda/slack] knowledge action error:', err)
+  }
+
+  // Edit the original message to show the decision and drop the buttons.
+  const channel = payload.channel?.id
+  const ts = payload.message?.ts
+  if (channel && ts) {
+    await getSlack().chat.update({
+      channel,
+      ts,
+      text: approved ? '이 정보를 저장했어요' : '이 정보는 저장하지 않을게요',
+      blocks: [],
+    })
+  }
+
+  return ok()
+}
+
 export async function handler(event: LambdaFunctionUrlEvent): Promise<LambdaResponse> {
   // Slack retries an event when we don't ack within ~3s. The agent takes longer than that,
   // so we process the first delivery and ignore retries to avoid double-handling.
   if (event.headers?.['x-slack-retry-num']) return ok()
 
   const rawBody = readRawBody(event)
+
+  // Slack interactivity (button clicks) arrives form-encoded as `payload=<json>`, not JSON.
+  const contentType = event.headers?.['content-type'] ?? event.headers?.['Content-Type'] ?? ''
+  if (contentType.includes('application/x-www-form-urlencoded') || rawBody.startsWith('payload=')) {
+    return handleInteractivity(rawBody)
+  }
 
   let payload: SlackEventBody
   try {

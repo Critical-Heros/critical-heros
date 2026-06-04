@@ -76,6 +76,7 @@ export async function initClickHouseSchema() {
         content     String,
         tags        Array(String),
         embedding   Array(Float32),
+        status      String DEFAULT 'pending',
         created_at  DateTime DEFAULT now(),
         updated_at  DateTime DEFAULT now()
       ) ENGINE = ReplacingMergeTree(updated_at)

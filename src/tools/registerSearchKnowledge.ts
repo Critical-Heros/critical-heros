@@ -32,6 +32,7 @@ export default function register(server: McpServer, _options: OptionsType) {
             cosineDistance(embedding, {queryEmbedding: Array(Float32)}) AS distance
           FROM knowledge FINAL
           WHERE repo_id = {repo_id: String}
+            AND status = 'approved'
             AND length(embedding) = {dim: UInt32}
           ORDER BY distance ASC
           LIMIT {limit: Int32}
