@@ -64,5 +64,24 @@ export async function initClickHouseSchema() {
     `,
   })
 
+  // Knowledge/recipe table - the bot saves conventions and recurring patterns for itself
+  // and recalls them semantically. ReplacingMergeTree(updated_at): the same (repo_id, id)
+  // is collapsed to the most recent write, giving upsert semantics.
+  await clickhouse.exec({
+    query: `
+      CREATE TABLE IF NOT EXISTS knowledge (
+        id          String,
+        repo_id     String,
+        title       String,
+        content     String,
+        tags        Array(String),
+        embedding   Array(Float32),
+        created_at  DateTime DEFAULT now(),
+        updated_at  DateTime DEFAULT now()
+      ) ENGINE = ReplacingMergeTree(updated_at)
+      ORDER BY (repo_id, id)
+    `,
+  })
+
   console.log('ClickHouse schema initialized')
 }

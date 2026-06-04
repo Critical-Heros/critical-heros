@@ -1,15 +1,17 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { OptionsType } from '@/types'
-import registerGetRecentCommits from './registerGetRecentCommits'
-import registerGetCommitDiff from './registerGetCommitDiff'
-import registerCorrelateIncident from './registerCorrelateIncident'
 import registerAnalyzeCommitImpact from './registerAnalyzeCommitImpact'
-import registerSearchCommits from './registerSearchCommits'
+import registerCorrelateIncident from './registerCorrelateIncident'
 import registerDraftPostmortem from './registerDraftPostmortem'
-import registerPostPrComment from './registerPostPrComment'
-import registerOpenFixPr from './registerOpenFixPr'
-import registerGetRelatedCommits from './registerGetRelatedCommits'
 import registerGetChangeTimeline from './registerGetChangeTimeline'
+import registerGetCommitDiff from './registerGetCommitDiff'
+import registerGetRecentCommits from './registerGetRecentCommits'
+import registerGetRelatedCommits from './registerGetRelatedCommits'
+import registerOpenFixPr from './registerOpenFixPr'
+import registerPostPrComment from './registerPostPrComment'
+import registerSaveKnowledge from './registerSaveKnowledge'
+import registerSearchCommits from './registerSearchCommits'
+import registerSearchKnowledge from './registerSearchKnowledge'
 import registerSummarizeChanges from './registerSummarizeChanges'
 
 export const registerTools = (server: McpServer, options: OptionsType) => {
@@ -24,4 +26,6 @@ export const registerTools = (server: McpServer, options: OptionsType) => {
   registerGetRelatedCommits(server, options)
   registerGetChangeTimeline(server, options)
   registerSummarizeChanges(server, options)
+  registerSaveKnowledge(server, options)
+  registerSearchKnowledge(server, options)
 }
