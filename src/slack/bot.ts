@@ -1,5 +1,7 @@
 import { App } from '@slack/bolt'
+import { TARGET_ENVIRONMENT } from '@/constants'
 import { registerMentionHandler } from './handlers/mention'
+import { registerMessageHandler } from './handlers/message'
 import { registerSlashCommandHandler } from './handlers/slash-command'
 
 const isSocketMode = process.env.SLACK_SOCKET_MODE === 'true'
@@ -20,7 +22,10 @@ export function createSlackApp(): App {
 
   registerMentionHandler(app)
   registerSlashCommandHandler(app)
-  // Message ingestion is handled by the slack-handler Lambda; the bot only does mentions + slash commands.
+  // In develop the bot ingests messages; in production the slack-handler lambda owns ingestion.
+  if (TARGET_ENVIRONMENT !== 'production') {
+    registerMessageHandler(app)
+  }
 
   return app
 }

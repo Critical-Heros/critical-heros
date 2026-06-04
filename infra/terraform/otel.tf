@@ -2,6 +2,7 @@ resource "helm_release" "otel_operator" {
   name             = "otel-operator"
   repository       = "https://open-telemetry.github.io/opentelemetry-helm-charts"
   chart            = "opentelemetry-operator"
+  version          = "0.114.1"
   namespace        = "monitoring"
   create_namespace = true
 
@@ -22,6 +23,7 @@ resource "helm_release" "otel_collector" {
   name             = "otel-collector"
   repository       = "https://open-telemetry.github.io/opentelemetry-helm-charts"
   chart            = "opentelemetry-collector"
+  version          = "0.158.0"
   namespace        = "monitoring"
   create_namespace = true
 

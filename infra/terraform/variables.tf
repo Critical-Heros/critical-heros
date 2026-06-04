@@ -27,3 +27,21 @@ variable "ssm_prefix" {
   type        = string
   default     = "/critical-hero"
 }
+
+variable "domain" {
+  description = "Root domain with a Route53 hosted zone in this account"
+  type        = string
+  default     = "critical-hero.com"
+}
+
+variable "mcp_host" {
+  description = "FQDN for the mcp-server ingress"
+  type        = string
+  default     = "mcp.critical-hero.com"
+}
+
+variable "acme_email" {
+  description = "Email for Let's Encrypt registration (used by the cert-manager ClusterIssuer)"
+  type        = string
+  default     = ""
+}
