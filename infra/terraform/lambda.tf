@@ -48,8 +48,8 @@ resource "aws_lambda_function" "fn" {
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.main.repository_url}:${each.value}"
   # PR review runs a multi-step agent (several LLM round-trips), so allow well beyond 30s.
-  timeout       = 120
-  memory_size   = 512
+  timeout       = 900
+  memory_size   = 1024
 
   environment {
     variables = local.lambda_env

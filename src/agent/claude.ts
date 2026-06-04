@@ -78,7 +78,7 @@ export async function runIncidentAgent(
     while (true) {
       const response = await getAnthropic().messages.create({
         model: process.env.CLAUDE_MODEL ?? 'claude-sonnet-4-6',
-        max_tokens: 1024,
+        max_tokens: 4096,
         system: SYSTEM_PROMPT,
         tools,
         messages,
@@ -106,11 +106,15 @@ export async function runIncidentAgent(
 
         messages.push({ role: 'user', content: toolResults })
       } else {
-        break
+        // e.g. stop_reason === 'max_tokens' - log it and return whatever text we have.
+        console.error(`[claude] unexpected stop_reason: ${response.stop_reason}, toolsUsed: ${toolsUsed.join(',')}`)
+        const textBlock = response.content.find(c => c.type === 'text')
+        return {
+          text: textBlock?.type === 'text' ? textBlock.text : '분석이 완료되지 않았습니다.',
+          toolsUsed,
+        }
       }
     }
-
-    return { text: '분석이 완료되지 않았습니다.', toolsUsed }
   } finally {
     await mcpClient.close()
   }
