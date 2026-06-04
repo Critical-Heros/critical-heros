@@ -41,7 +41,13 @@ mcp-server:
   service:
     type: LoadBalancer
     port: 8401
-    certificateArn: "" # AWS ACM cert ARN for TLS termination on 443
+    certificateArn: "" # AWS ACM cert ARN (EKS only; ignored on k3s)
+  # Traefik ingress + cert-manager TLS (k3s). Set service.type to ClusterIP when enabled.
+  ingress:
+    enabled: false
+    host: "" # e.g. mcp.critical-hero.com
+    tls: false
+    email: "" # Let's Encrypt registration email
   resources:
     requests:
       cpu: 250m

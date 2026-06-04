@@ -4,6 +4,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js'
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify'
+import { TARGET_ENVIRONMENT } from '@/constants'
 import { createServer } from '@/services'
 import type { OptionsType } from '@/types'
 import { generateSessionId } from '@/utils'
@@ -100,9 +101,11 @@ export async function webServer(server: McpServer, options: OptionsType) {
   // Health check for k8s liveness/readiness probes
   app.get('/health', async () => ({ status: 'ok' }))
 
-  // GitHub 웹훅 라우트 등록
-  await registerGithubWebhook(app)
-  await registerPrometheusWebhook(app)
+  // In-process webhooks run in develop; in production the lambdas own ingestion + PR review.
+  if (TARGET_ENVIRONMENT !== 'production') {
+    await registerGithubWebhook(app)
+    await registerPrometheusWebhook(app)
+  }
 
   app.listen({ port: options.port, host: '0.0.0.0' }, (err, address) => {
     if (err) {

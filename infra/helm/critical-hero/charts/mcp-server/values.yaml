@@ -11,6 +11,13 @@ service:
   port: 8401
   certificateArn: ""
 
+# When ingress is enabled, Traefik fronts the service, so set service.type to ClusterIP.
+ingress:
+  enabled: false
+  host: ""
+  tls: false
+  email: ""
+
 resources:
   requests:
     cpu: 250m
