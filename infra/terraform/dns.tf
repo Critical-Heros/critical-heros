@@ -10,6 +10,14 @@ resource "aws_route53_record" "mcp" {
   records = [aws_eip.k3s.public_ip]
 }
 
+resource "aws_route53_record" "grafana" {
+  zone_id = data.aws_route53_zone.main.zone_id
+  name    = var.grafana_host
+  type    = "A"
+  ttl     = 300
+  records = [aws_eip.k3s.public_ip]
+}
+
 # cert-manager issues the Let's Encrypt cert for the mcp ingress (ClusterIssuer lives in the helm chart).
 resource "helm_release" "cert_manager" {
   name             = "cert-manager"

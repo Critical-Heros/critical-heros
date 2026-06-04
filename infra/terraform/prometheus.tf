@@ -29,6 +29,24 @@ resource "helm_release" "prometheus" {
             static_configs:
               - targets:
                   - otel-collector-opentelemetry-collector.monitoring:8889
+
+    grafana:
+      # Expose Grafana through the k3s Traefik ingress with a cert-manager TLS cert.
+      # Reuses the letsencrypt-prod ClusterIssuer created by the critical-hero chart.
+      grafana.ini:
+        server:
+          root_url: https://${var.grafana_host}
+      ingress:
+        enabled: true
+        ingressClassName: traefik
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-prod
+        hosts:
+          - ${var.grafana_host}
+        tls:
+          - secretName: grafana-tls
+            hosts:
+              - ${var.grafana_host}
   EOT
   ]
 

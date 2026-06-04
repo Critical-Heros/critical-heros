@@ -40,6 +40,12 @@ variable "mcp_host" {
   default     = "mcp.critical-hero.com"
 }
 
+variable "grafana_host" {
+  description = "FQDN for the Grafana ingress"
+  type        = string
+  default     = "grafana.critical-hero.com"
+}
+
 variable "acme_email" {
   description = "Email for Let's Encrypt registration (used by the cert-manager ClusterIssuer)"
   type        = string
