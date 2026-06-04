@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.17"
     }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 5.0"
+    }
   }
 }
 
@@ -29,6 +33,11 @@ provider "helm" {
   kubernetes {
     config_path = pathexpand("~/.kube/critical-hero-k3s.yaml")
   }
+}
+
+# Cloudflare hosts DNS for the domain (registrar may be elsewhere; just delegate NS to Cloudflare).
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token
 }
 
 data "aws_vpc" "default" {

@@ -7,3 +7,7 @@
 # org_name          = "eeeemune"
 # ec2_instance_type = "t3.xlarge"
 # ssm_prefix        = "/critical-hero"
+
+# Cloudflare DNS (required - no defaults):
+# cloudflare_api_token = "..."   # Zone:DNS:Edit token for the domain
+# cloudflare_zone_id   = "..."   # zone Overview page

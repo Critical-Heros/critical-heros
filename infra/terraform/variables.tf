@@ -29,21 +29,32 @@ variable "ssm_prefix" {
 }
 
 variable "domain" {
-  description = "Root domain with a Route53 hosted zone in this account"
+  description = "Root domain hosted in Cloudflare DNS"
   type        = string
-  default     = "critical-hero.com"
+  default     = "critical-hero.uk"
 }
 
 variable "mcp_host" {
   description = "FQDN for the mcp-server ingress"
   type        = string
-  default     = "mcp.critical-hero.com"
+  default     = "mcp.critical-hero.uk"
 }
 
 variable "grafana_host" {
   description = "FQDN for the Grafana ingress"
   type        = string
-  default     = "grafana.critical-hero.com"
+  default     = "grafana.critical-hero.uk"
+}
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token with Zone:DNS:Edit on the domain's zone"
+  type        = string
+  sensitive   = true
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for the domain (Overview page of the zone)"
+  type        = string
 }
 
 variable "acme_email" {
