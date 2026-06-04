@@ -30,6 +30,7 @@ global:
   slackSocketMode: "true"
   slackCriticalChannel: "#critical"
   slackIncidentChannels: "#incidents"
+  slackDmUserId: ""
   defaultRepoId: ""
 
 mcp-server:

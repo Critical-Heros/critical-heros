@@ -46,33 +46,68 @@ function getSlack(): WebClient {
   return slackClient
 }
 
+function stripMentions(text: string): string {
+  return text.replace(/<@[A-Z0-9]+>/g, '').trim()
+}
+
+// Load prior messages in the thread so a follow-up @mention continues the conversation
+// instead of starting fresh. Bot messages map to 'assistant', everyone else to 'user'.
+async function fetchThreadHistory(
+  slack: WebClient,
+  channel: string,
+  threadTs: string,
+  currentTs: string,
+): Promise<Array<{ role: 'user' | 'assistant'; text: string }>> {
+  // A top-level mention (its own ts is the thread root) has nothing prior to load.
+  if (threadTs === currentTs) return []
+
+  try {
+    const res = await slack.conversations.replies({ channel, ts: threadTs, limit: 50 })
+    return (res.messages ?? [])
+      .filter(m => m.ts !== currentTs && typeof m.text === 'string')
+      .map(m => ({
+        role: m.bot_id ? ('assistant' as const) : ('user' as const),
+        text: stripMentions(m.text as string),
+      }))
+      .filter(m => m.text.length > 0)
+  } catch (err) {
+    console.error('[lambda/slack] failed to load thread history:', err)
+    return []
+  }
+}
+
 // Reply to an @mention: run the agent and post the result in-thread.
 async function handleMention(ev: SlackEvent): Promise<void> {
   const slack = getSlack()
   const channel = ev.channel as string
   const ts = ev.ts as string
-  const query = (ev.text ?? '').replace(/<@[A-Z0-9]+>/g, '').trim()
+  // Reply into the existing thread when the mention is a reply; otherwise start one on the mention.
+  const threadTs = ev.thread_ts ?? ts
+  const query = stripMentions(ev.text ?? '')
 
   if (!query) {
     await slack.chat.postMessage({
       channel,
-      thread_ts: ts,
+      thread_ts: threadTs,
       text: '무엇을 도와드릴까요? `@critical-hero <질문>` 형식으로 질문해주세요.',
     })
     return
   }
 
-  const thinking = await slack.chat.postMessage({ channel, thread_ts: ts, text: '🔍 분석 중입니다...' })
+  // Fetch context before posting the placeholder so it isn't included in the history.
+  const threadHistory = await fetchThreadHistory(slack, channel, threadTs, ts)
+
+  const thinking = await slack.chat.postMessage({ channel, thread_ts: threadTs, text: '🔍 분석 중입니다...' })
 
   try {
     const repoId = process.env.DEFAULT_REPO_ID ?? 'default'
-    const result = await runAgent(query, repoId, {})
+    const result = await runAgent(query, repoId, { threadHistory })
     const formatted = toSlackMrkdwn(result.text)
 
     if (thinking.ts) {
       await slack.chat.update({ channel, ts: thinking.ts as string, text: formatted })
     } else {
-      await slack.chat.postMessage({ channel, thread_ts: ts, text: formatted })
+      await slack.chat.postMessage({ channel, thread_ts: threadTs, text: formatted })
     }
   } catch (err) {
     console.error('[lambda/slack] mention handler error:', err)
