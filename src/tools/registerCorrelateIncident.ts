@@ -36,15 +36,22 @@ export default function register(server: McpServer, _options: OptionsType) {
             AND timestamp BETWEEN
               parseDateTimeBestEffort({timestamp: String}) - INTERVAL {window_hours: Int32} HOUR
               AND parseDateTimeBestEffort({timestamp: String})
-            AND length(embedding) > 0
+            AND length(embedding) = {dim: UInt32}
           ORDER BY similarity_score ASC
           LIMIT 20
         `,
-        query_params: { repo_id, timestamp, window_hours, errorEmbedding },
+        query_params: { repo_id, timestamp, window_hours, errorEmbedding, dim: errorEmbedding.length },
         format: 'JSONEachRow',
       })
 
-      const commits = (await result.json()) as any[]
+      const commits = (await result.json()) as Array<{
+        sha: string
+        author: string
+        message: string
+        timestamp: string
+        diff_s3_key: string
+        similarity_score: number
+      }>
 
       if (commits.length === 0) {
         return {
