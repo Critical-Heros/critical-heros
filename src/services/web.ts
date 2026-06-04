@@ -41,7 +41,9 @@ export async function webServer(server: McpServer, options: OptionsType) {
           delete transports.streamable[transport.sessionId]
         }
       }
-      await server.connect(transport)
+      // A server instance can only bind one transport, so create a fresh one per session.
+      const sessionServer = createServer(options)
+      await sessionServer.connect(transport)
     } else {
       reply.status(400).send({
         jsonrpc: '2.0',
