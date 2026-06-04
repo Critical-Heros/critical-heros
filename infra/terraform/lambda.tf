@@ -47,7 +47,8 @@ resource "aws_lambda_function" "fn" {
   role          = aws_iam_role.lambda.arn
   package_type  = "Image"
   image_uri     = "${aws_ecr_repository.main.repository_url}:${each.value}"
-  timeout       = 30
+  # PR review runs a multi-step agent (several LLM round-trips), so allow well beyond 30s.
+  timeout       = 120
   memory_size   = 512
 
   environment {
