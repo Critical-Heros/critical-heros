@@ -47,7 +47,21 @@ export async function triggerPrReview(payload: PrMergePayload): Promise<void> {
       text: result.text,
     })
 
-    // 위험도 파싱 후 HIGH면 PR 작성자에게 DM
+    // 설정된 owner에게는 위험도와 무관하게 항상 Blast Radius 분석을 DM으로 전송
+    const ownerId = process.env.SLACK_DM_USER_ID
+    if (ownerId) {
+      await dmUser(
+        ownerId,
+        [
+          `*[Blast Radius] PR #${prNumber} 머지 알림*`,
+          `\`${repoId}\` 에 PR #${prNumber} "${prTitle}"가 머지됐습니다.`,
+          '',
+          previewText(result.text),
+        ].join('\n'),
+      ).catch(err => console.error('[triggerPrReview] owner DM 전송 실패:', err))
+    }
+
+    // 위험도 파싱 후 HIGH면 PR 작성자에게도 DM (작성자가 owner와 동일하면 위에서 이미 전송)
     const riskMatch = result.text.match(/\b(HIGH|MEDIUM|LOW)\b/)
     if (riskMatch?.[0] === 'HIGH') {
       await notifyAuthorDm(payload, result.text)
@@ -60,6 +74,18 @@ export async function triggerPrReview(payload: PrMergePayload): Promise<void> {
       text: `❌ PR #${prNumber} 자동 분석에 실패했습니다. 수동으로 확인해주세요.`,
     })
   }
+}
+
+function previewText(text: string): string {
+  return text.length > 400 ? text.slice(0, 400) + '...' : text
+}
+
+// Open a DM with the user and post a message there.
+async function dmUser(userId: string, text: string): Promise<void> {
+  const dm = await slackClient.conversations.open({ users: userId })
+  const dmChannel = dm.channel?.id
+  if (!dmChannel) return
+  await slackClient.chat.postMessage({ channel: dmChannel, text })
 }
 
 async function notifyAuthorDm(payload: PrMergePayload, analysisText: string): Promise<void> {
@@ -79,21 +105,18 @@ async function notifyAuthorDm(payload: PrMergePayload, analysisText: string): Pr
       return
     }
 
-    const dm = await slackClient.conversations.open({ users: userId })
-    const dmChannel = dm.channel?.id
-    if (!dmChannel) return
+    // owner와 동일하면 위에서 이미 DM을 보냈으므로 중복 전송 방지
+    if (userId === process.env.SLACK_DM_USER_ID) return
 
-    const preview = analysisText.length > 400 ? analysisText.slice(0, 400) + '...' : analysisText
-
-    await slackClient.chat.postMessage({
-      channel: dmChannel,
-      text: [
+    await dmUser(
+      userId,
+      [
         `🔴 *[High Risk] PR #${prNumber} 머지 알림*`,
         `\`${repoId}\` 에 머지된 PR이 *HIGH* 위험도로 분류됐습니다. 확인이 필요합니다.`,
         '',
-        preview,
+        previewText(analysisText),
       ].join('\n'),
-    })
+    )
   } catch (err) {
     console.error('[triggerPrReview] Slack DM 전송 실패:', err)
   }
