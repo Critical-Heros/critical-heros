@@ -75,16 +75,22 @@ export async function processGithubEvent(input: GithubEventInput): Promise<Webho
     const repo = body.repository?.name ?? ''
     const repoId = body.repository?.full_name ?? ''
 
-    triggerPrReview({
-      owner,
-      repo,
-      repoId,
-      prNumber: pr.number,
-      prTitle: pr.title,
-      mergeCommitSha: pr.merge_commit_sha,
-      authorLogin: pr.user?.login ?? 'unknown',
-      authorEmail: pr.user?.email ?? undefined,
-    }).catch((err: unknown) => console.error('[webhook/github] PR review trigger 실패:', err))
+    // Must await: in Lambda the execution environment freezes once the handler returns,
+    // so a fire-and-forget call would post the placeholder but never the analysis.
+    try {
+      await triggerPrReview({
+        owner,
+        repo,
+        repoId,
+        prNumber: pr.number,
+        prTitle: pr.title,
+        mergeCommitSha: pr.merge_commit_sha,
+        authorLogin: pr.user?.login ?? 'unknown',
+        authorEmail: pr.user?.email ?? undefined,
+      })
+    } catch (err: unknown) {
+      console.error('[webhook/github] PR review trigger 실패:', err)
+    }
 
     return { status: 200, body: { message: `PR #${pr.number} review triggered` } }
   }
