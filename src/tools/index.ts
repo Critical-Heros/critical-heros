@@ -9,7 +9,9 @@ import registerGetRecentCommits from './registerGetRecentCommits'
 import registerGetRelatedCommits from './registerGetRelatedCommits'
 import registerOpenFixPr from './registerOpenFixPr'
 import registerPostPrComment from './registerPostPrComment'
+import registerReadRepoFile from './registerReadRepoFile'
 import registerSaveKnowledge from './registerSaveKnowledge'
+import registerSearchCode from './registerSearchCode'
 import registerSearchCommits from './registerSearchCommits'
 import registerSearchKnowledge from './registerSearchKnowledge'
 import registerSummarizeChanges from './registerSummarizeChanges'
@@ -28,4 +30,6 @@ export const registerTools = (server: McpServer, options: OptionsType) => {
   registerSummarizeChanges(server, options)
   registerSaveKnowledge(server, options)
   registerSearchKnowledge(server, options)
+  registerReadRepoFile(server, options)
+  registerSearchCode(server, options)
 }
