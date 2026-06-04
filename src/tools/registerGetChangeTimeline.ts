@@ -20,24 +20,27 @@ export default function register(server: McpServer, _options: OptionsType) {
       const queryEmbedding = await generateEmbedding(query)
       const result = await clickhouse.query({
         query: `
-    SELECT
-      sha,
-      author,
-      message,
-      timestamp,
-      cosineDistance(embedding, {queryEmbedding: Array(Float32)}) AS distance
-    FROM commits
-    WHERE repo_id = {repo_id: String}
-      AND length(embedding) > 0
-      AND cosineDistance(embedding, {queryEmbedding: Array(Float32)}) < 0.5
+    SELECT sha, author, message, timestamp, distance
+    FROM (
+      SELECT
+        sha,
+        author,
+        message,
+        timestamp,
+        cosineDistance(embedding, {queryEmbedding: Array(Float32)}) AS distance
+      FROM commits
+      WHERE repo_id = {repo_id: String}
+        AND length(embedding) = {dim: UInt32}
+    )
+    WHERE distance < 0.5
     ORDER BY timestamp ASC
     LIMIT {limit: Int32}
   `,
-        query_params: { queryEmbedding, repo_id, limit },
+        query_params: { queryEmbedding, repo_id, limit, dim: queryEmbedding.length },
         format: 'JSONEachRow',
       })
 
-      const rows = (await result.json()) as any[]
+      const rows = (await result.json()) as Array<Record<string, unknown>>
 
       return {
         content: [

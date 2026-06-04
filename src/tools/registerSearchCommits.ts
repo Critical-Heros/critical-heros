@@ -31,15 +31,15 @@ export default function register(server: McpServer, _options: OptionsType) {
             cosineDistance(embedding, {queryEmbedding: Array(Float32)}) AS distance
           FROM commits
           WHERE repo_id = {repo_id: String}
-            AND length(embedding) > 0
+            AND length(embedding) = {dim: UInt32}
           ORDER BY distance ASC
           LIMIT {limit: Int32}
         `,
-        query_params: { queryEmbedding, repo_id, limit },
+        query_params: { queryEmbedding, repo_id, limit, dim: queryEmbedding.length },
         format: 'JSONEachRow',
       })
 
-      const rows = (await result.json()) as any[]
+      const rows = (await result.json()) as Array<Record<string, unknown>>
 
       if (rows.length === 0) {
         return {
