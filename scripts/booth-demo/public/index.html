@@ -69,7 +69,7 @@
       <div class="bar"><span id="prog"></span></div>
       <div class="status" id="status">Ready.</div>
 
-      <a class="grafana" id="grafana" href="#" target="_blank" rel="noopener">📊 Open Grafana dashboard</a>
+      <a class="grafana" id="grafana" href="#" target="_blank" rel="noopener">Grafana dashboard</a>
 
       <p class="hint">
         The button only generates traffic. The spike fires a Prometheus alert, and
@@ -90,19 +90,21 @@
       // --- rising bubbles ---------------------------------------------------
       const labels = ['200', 'GET /health', 'req', '200 OK', '↑', 'mcp-server']
       const layer = $('bubbles')
-      function spawnBubble() {
+      // Two tidy upward streams that frame the card, instead of scattering across the screen.
+      function spawnBubble(side) {
         const b = document.createElement('div')
         b.className = 'bubble'
         b.textContent = labels[(Math.random() * labels.length) | 0]
-        b.style.left = (Math.random() * 96) + 'vw'
-        const dur = 0.7 + Math.random() * 0.8 // fast: 0.7-1.5s
+        const base = side === 'L' ? 9 : 77 // left band 9-22vw, right band 77-90vw
+        b.style.left = (base + Math.random() * 13) + 'vw'
+        const dur = 0.7 + Math.random() * 0.7 // fast: 0.7-1.4s
         b.style.animationDuration = dur + 's'
-        b.style.fontSize = (10 + Math.random() * 8) + 'px'
+        b.style.fontSize = (11 + Math.random() * 5) + 'px'
         b.addEventListener('animationend', () => b.remove())
         layer.appendChild(b)
       }
-      // Spawn a fast stream while running (~28 bubbles/sec).
-      setInterval(() => { if (running) { spawnBubble(); spawnBubble(); } }, 36)
+      // One bubble per side each tick: balanced, lively, but not messy.
+      setInterval(() => { if (running) { spawnBubble('L'); spawnBubble('R') } }, 60)
 
       // --- status polling + toggle -----------------------------------------
       async function refresh() {
@@ -139,7 +141,6 @@
           return
         }
         $('status').textContent = 'starting…'
-        if (grafanaUrl) window.open(grafanaUrl, '_blank', 'noopener') // pop Grafana on the second screen
         await fetch(api('/api/run'), { method: 'POST' })
       })
 
