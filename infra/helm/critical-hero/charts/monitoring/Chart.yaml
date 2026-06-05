@@ -1,0 +1,6 @@
+apiVersion: v2
+name: monitoring
+description: Wires kube-prometheus-stack to watch a target app and route its alert to Critical Hero
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

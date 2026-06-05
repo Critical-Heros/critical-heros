@@ -1,0 +1,26 @@
+{{- if .Values.enabled }}
+{{- $t := (.Values.global | default dict).targetApp | default dict -}}
+{{- $ns := $t.namespace | default .Values.targetNamespace -}}
+# Routes the HighCpuLoad alert to Critical Hero's webhook. Lives in the target app's namespace so
+# the operator's default OnNamespace matcher scopes the route to alerts with namespace=<targetNamespace>.
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: critical-hero-incident
+  namespace: {{ $ns }}
+spec:
+  route:
+    receiver: critical-hero-webhook
+    groupBy: ["alertname"]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 10m
+    matchers:
+      - name: alertname
+        value: HighCpuLoad
+  receivers:
+    - name: critical-hero-webhook
+      webhookConfigs:
+        - url: {{ .Values.webhookUrl }}
+          sendResolved: false
+{{- end }}

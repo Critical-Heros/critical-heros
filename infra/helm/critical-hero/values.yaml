@@ -32,6 +32,13 @@ global:
   slackIncidentChannels: "#incidents"
   slackDmUserId: ""
   defaultRepoId: ""
+  # The external app Critical Hero watches. One knob drives both the stress flood target and
+  # the monitoring rule/route — the stress and monitoring subcharts derive from global.targetApp.
+  targetApp:
+    name: induck-demo
+    namespace: induck
+    port: 80
+    path: /
 
 mcp-server:
   replicaCount: 1
@@ -87,10 +94,8 @@ stress:
     pullPolicy: Always
   service:
     port: 4545
-  target: http://induck-demo.induck.svc.cluster.local:80
-  path: /
+  # target / path / grafana namespace are derived from global.targetApp.
   grafana: https://grafana.critical-hero.uk
-  grafanaNs: induck
   durationMs: "120000"
   concurrency: "160"
   ingress:
@@ -98,3 +103,11 @@ stress:
     host: critical-hero.uk
     path: /stress
     tls: true
+
+monitoring:
+  enabled: true
+  # app / targetNamespace are derived from global.targetApp.
+  cpuThreshold: 0.15
+  promRuleNamespace: monitoring
+  prometheusReleaseLabel: prometheus
+  webhookUrl: http://mcp-server.critical-hero.svc.cluster.local:8401/webhook/prometheus

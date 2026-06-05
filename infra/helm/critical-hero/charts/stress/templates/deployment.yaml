@@ -1,3 +1,8 @@
+{{- $t := (.Values.global | default dict).targetApp | default dict -}}
+{{- $target := .Values.target -}}
+{{- if $t.name }}{{ $target = printf "http://%s.%s.svc.cluster.local:%v" $t.name $t.namespace ($t.port | default 80) }}{{ end -}}
+{{- $path := $t.path | default .Values.path -}}
+{{- $grafanaNs := $t.namespace | default .Values.grafanaNs -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,13 +26,13 @@ spec:
             - name: BOOTH_PORT
               value: {{ .Values.service.port | quote }}
             - name: BOOTH_TARGET
-              value: {{ .Values.target | quote }}
+              value: {{ $target | quote }}
             - name: BOOTH_PATH
-              value: {{ .Values.path | quote }}
+              value: {{ $path | quote }}
             - name: BOOTH_GRAFANA
               value: {{ .Values.grafana | quote }}
             - name: BOOTH_GRAFANA_NS
-              value: {{ .Values.grafanaNs | quote }}
+              value: {{ $grafanaNs | quote }}
             - name: BOOTH_DURATION_MS
               value: {{ .Values.durationMs | quote }}
             - name: BOOTH_CONCURRENCY

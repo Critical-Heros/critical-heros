@@ -1,0 +1,17 @@
+# Configures kube-prometheus-stack to watch a target app and route its HighCpuLoad alert to
+# Critical Hero's incident webhook. Folds the infra/monitoring manifests into the chart.
+enabled: true
+
+# The app Critical Hero watches (pod-name prefix + its namespace).
+app: induck-demo
+targetNamespace: induck
+
+# CPU rate (cores, summed across the app's pods) that trips the alert.
+cpuThreshold: 0.15
+
+# Where the PrometheusRule is created (kube-prometheus-stack namespace) and the release label it selects on.
+promRuleNamespace: monitoring
+prometheusReleaseLabel: prometheus
+
+# Critical Hero webhook the firing alert is routed to.
+webhookUrl: http://mcp-server.critical-hero.svc.cluster.local:8401/webhook/prometheus

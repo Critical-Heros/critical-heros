@@ -1,0 +1,27 @@
+{{- if .Values.enabled }}
+{{- $t := (.Values.global | default dict).targetApp | default dict -}}
+{{- $app := $t.name | default .Values.app -}}
+{{- $ns := $t.namespace | default .Values.targetNamespace -}}
+# Fires when the watched app's CPU stays high for 30s (the booth traffic surge).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ $app }}-traffic
+  namespace: {{ .Values.promRuleNamespace }}
+  labels:
+    release: {{ .Values.prometheusReleaseLabel }}
+spec:
+  groups:
+    - name: {{ $app }}.traffic
+      rules:
+        - alert: HighCpuLoad
+          expr: sum(rate(container_cpu_usage_seconds_total{namespace="{{ $ns }}",pod=~"{{ $app }}.*",container!=""}[1m])) > {{ .Values.cpuThreshold }}
+          for: 30s
+          labels:
+            severity: critical
+            service: {{ $app }}
+            namespace: {{ $ns }}
+          annotations:
+            summary: "{{ $app }} CPU saturated by traffic surge"
+            description: "{{ $app }} CPU stayed above threshold for 30s, driven by a traffic spike."
+{{- end }}
