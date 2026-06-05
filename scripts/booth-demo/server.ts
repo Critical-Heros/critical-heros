@@ -17,14 +17,17 @@ import Fastify from 'fastify'
 const here = dirname(fileURLToPath(import.meta.url))
 
 // --- Config (override via env) ---------------------------------------------
-const TARGET = (process.env.BOOTH_TARGET ?? 'https://mcp.critical-hero.uk').replace(/\/$/, '')
-const HEALTH_URL = `${TARGET}/health`
+// Flood the external app Critical Hero is watching (induck-demo), not Critical Hero itself.
+const TARGET = (process.env.BOOTH_TARGET ?? 'https://induck-demo.critical-hero.uk').replace(/\/$/, '')
+const FLOOD_PATH = process.env.BOOTH_PATH ?? '/'
+const FLOOD_URL = `${TARGET}${FLOOD_PATH}`
 const GRAFANA_BASE = (process.env.BOOTH_GRAFANA ?? 'https://grafana.critical-hero.uk').replace(/\/$/, '')
+const GRAFANA_NS = process.env.BOOTH_GRAFANA_NS ?? 'induck'
 // "Kubernetes / Networking / Namespace (Pods)" — bandwidth-per-pod, the most visible spike.
-const GRAFANA_URL = `${GRAFANA_BASE}/d/8b7a8b326d7a6f1f04244066368c67af/kubernetes-networking-namespace-pods?orgId=1&var-namespace=critical-hero&from=now-15m&to=now&refresh=10s`
+const GRAFANA_URL = `${GRAFANA_BASE}/d/8b7a8b326d7a6f1f04244066368c67af/kubernetes-networking-namespace-pods?orgId=1&var-namespace=${GRAFANA_NS}&from=now-15m&to=now&refresh=10s`
 
 const FLOOD_DURATION_MS = Number(process.env.BOOTH_DURATION_MS ?? 120_000)
-const FLOOD_CONCURRENCY = Number(process.env.BOOTH_CONCURRENCY ?? 80)
+const FLOOD_CONCURRENCY = Number(process.env.BOOTH_CONCURRENCY ?? 160)
 const PORT = Number(process.env.BOOTH_PORT ?? 4545)
 
 // --- Run state -------------------------------------------------------------
@@ -64,7 +67,7 @@ async function flood() {
   }
   const startedAt = Date.now()
   const deadline = startedAt + FLOOD_DURATION_MS
-  console.log(`[booth] flooding ${HEALTH_URL} for ${FLOOD_DURATION_MS / 1000}s with ${FLOOD_CONCURRENCY} workers`)
+  console.log(`[booth] flooding ${FLOOD_URL} for ${FLOOD_DURATION_MS / 1000}s with ${FLOOD_CONCURRENCY} workers`)
 
   let lastCount = 0
   const ticker = setInterval(() => {
@@ -76,7 +79,7 @@ async function flood() {
   async function worker() {
     while (Date.now() < deadline && !stopRequested) {
       try {
-        const res = await fetch(HEALTH_URL, { signal: AbortSignal.timeout(5000) })
+        const res = await fetch(FLOOD_URL, { signal: AbortSignal.timeout(5000) })
         await res.arrayBuffer().catch(() => {})
         state.requestsSent++
       } catch {
@@ -122,6 +125,6 @@ app.listen({ port: PORT, host: '0.0.0.0' }, (err, address) => {
   }
   console.log('\n  Critical Heros booth traffic trigger')
   console.log(`  → open ${address}`)
-  console.log(`  target:  ${HEALTH_URL}`)
+  console.log(`  target:  ${FLOOD_URL}`)
   console.log(`  grafana: ${GRAFANA_URL}\n`)
 })

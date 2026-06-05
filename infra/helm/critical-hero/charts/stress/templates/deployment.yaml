@@ -22,8 +22,12 @@ spec:
               value: {{ .Values.service.port | quote }}
             - name: BOOTH_TARGET
               value: {{ .Values.target | quote }}
+            - name: BOOTH_PATH
+              value: {{ .Values.path | quote }}
             - name: BOOTH_GRAFANA
               value: {{ .Values.grafana | quote }}
+            - name: BOOTH_GRAFANA_NS
+              value: {{ .Values.grafanaNs | quote }}
             - name: BOOTH_DURATION_MS
               value: {{ .Values.durationMs | quote }}
             - name: BOOTH_CONCURRENCY

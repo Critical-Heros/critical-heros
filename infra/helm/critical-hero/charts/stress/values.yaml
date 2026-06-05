@@ -9,11 +9,13 @@ image:
 service:
   port: 4545
 
-# Floods the in-cluster mcp-server service; Grafana link is the public host (opened in the browser).
-target: http://mcp-server.critical-hero.svc.cluster.local:8401
+# Floods the external app Critical Hero watches (induck-demo); Grafana link is the public host.
+target: http://induck-demo.induck.svc.cluster.local:80
+path: /
 grafana: https://grafana.critical-hero.uk
+grafanaNs: induck
 durationMs: "120000"
-concurrency: "80"
+concurrency: "160"
 
 # Served at host/path via Traefik with a StripPrefix middleware so the app sees /.
 ingress:

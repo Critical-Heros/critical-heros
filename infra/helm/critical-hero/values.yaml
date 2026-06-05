@@ -87,10 +87,12 @@ stress:
     pullPolicy: Always
   service:
     port: 4545
-  target: http://mcp-server.critical-hero.svc.cluster.local:8401
+  target: http://induck-demo.induck.svc.cluster.local:80
+  path: /
   grafana: https://grafana.critical-hero.uk
+  grafanaNs: induck
   durationMs: "120000"
-  concurrency: "80"
+  concurrency: "160"
   ingress:
     enabled: true
     host: critical-hero.uk
