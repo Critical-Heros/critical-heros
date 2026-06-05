@@ -15,4 +15,7 @@ dependencies:
   - name: db
     version: "0.1.0"
     repository: "file://charts/db"
+  - name: stress
+    version: "0.1.0"
+    repository: "file://charts/stress"
 

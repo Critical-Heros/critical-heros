@@ -1,5 +1,4 @@
 import { WebClient } from '@slack/web-api'
-import { runAgent } from './router'
 import 'dotenv/config'
 
 // Prometheus Alertmanager webhook payload 타입
@@ -26,8 +25,12 @@ export interface AlertmanagerPayload {
 
 const slackClient = new WebClient(process.env.SLACK_BOT_TOKEN)
 
-export async function triggerIncidentAlert(payload: AlertmanagerPayload): Promise<void> {
-  // firing 상태 알람만 처리 (resolved는 무시)
+// Repo the proposed fix PR is opened against. Carried in the button value so the approve
+// handler (running in the Slack pod) knows where to open it.
+const INCIDENT_FIX_REPO = process.env.INCIDENT_FIX_REPO ?? 'Critical-Heros/critical-heros'
+
+export async function triggerIncidentAlert(payload: AlertmanagerPayload, incidentId?: string): Promise<void> {
+  // Only react to firing alerts (ignore resolved).
   const firingAlerts = payload.alerts.filter(a => a.status === 'firing')
   if (firingAlerts.length === 0) return
 
@@ -37,43 +40,64 @@ export async function triggerIncidentAlert(payload: AlertmanagerPayload): Promis
   const description = alert.annotations.description ?? alert.annotations.summary ?? alertName
   const incidentTime = alert.startsAt
   const severity = alert.labels.severity ?? payload.commonLabels.severity ?? 'unknown'
+  const grafanaUrl = alert.generatorURL || payload.externalURL || ''
 
-  const repoId = process.env.DEFAULT_REPO_ID ?? 'default'
+  const incident = incidentId ?? alertName
   const channel = process.env.SLACK_CRITICAL_CHANNEL ?? '#critical'
 
-  // 인시던트 시작 알림 먼저 포스팅
-  const initialPost = await slackClient.chat.postMessage({
+  // Keep the button value small (Slack caps it ~2000 chars): only identifiers, no file content.
+  const actionValue = JSON.stringify({ incident_id: incident, repo: INCIDENT_FIX_REPO, alertname: alertName, service })
+
+  // Post the incident with an approve-to-fix button. Approving opens the PR via openFixPr().
+  await slackClient.chat.postMessage({
     channel,
-    text: [
-      `🚨 *인시던트 감지*`,
-      `*서비스:* ${service}`,
-      `*알람:* ${alertName}  |  *심각도:* ${severity}`,
-      `*설명:* ${description}`,
-      `*발생 시각:* ${incidentTime}`,
-      '',
-      `🔍 원인 커밋 분석 중...`,
-    ].join('\n'),
+    text: `🚨 Incident detected: ${alertName} on ${service}`,
+    blocks: [
+      { type: 'header', text: { type: 'plain_text', text: '🚨 Incident detected', emoji: true } },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Service:*\n${service}` },
+          { type: 'mrkdwn', text: `*Alert:*\n${alertName}` },
+          { type: 'mrkdwn', text: `*Severity:*\n${severity}` },
+          { type: 'mrkdwn', text: `*Started:*\n${incidentTime}` },
+        ],
+      },
+      {
+        type: 'section',
+        text: {
+          type: 'mrkdwn',
+          text: `*Details:* ${description}\n\nCritical Hero prepared a fix: add a HorizontalPodAutoscaler so \`${service}\` scales out under load instead of saturating a single replica. Approve to open the PR.`,
+        },
+      },
+      {
+        type: 'actions',
+        elements: [
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: '✅ Approve & open fix PR', emoji: true },
+            style: 'primary',
+            action_id: 'approve_fix_pr',
+            value: actionValue,
+          },
+          {
+            type: 'button',
+            text: { type: 'plain_text', text: '✖ Deny', emoji: true },
+            style: 'danger',
+            action_id: 'deny_fix_pr',
+            value: actionValue,
+          },
+          ...(grafanaUrl
+            ? [
+                {
+                  type: 'button' as const,
+                  text: { type: 'plain_text' as const, text: '📊 Grafana', emoji: true },
+                  url: grafanaUrl,
+                },
+              ]
+            : []),
+        ],
+      },
+    ],
   })
-
-  try {
-    const result = await runAgent(
-      `인시던트 발생. 서비스: ${service}, 알람: ${alertName}, 에러: ${description}. 원인 커밋을 찾아 분석해줘.`,
-      repoId,
-      { incidentTime },
-    )
-
-    // 분석 결과를 스레드로 포스팅
-    await slackClient.chat.postMessage({
-      channel,
-      thread_ts: initialPost.ts,
-      text: result.text,
-    })
-  } catch (error) {
-    console.error('[triggerIncidentAlert] 에이전트 분석 실패:', error)
-    await slackClient.chat.postMessage({
-      channel,
-      thread_ts: initialPost.ts,
-      text: `❌ 자동 분석에 실패했습니다. 수동으로 확인해주세요.\n\`/hero incident ${description}\``,
-    })
-  }
 }

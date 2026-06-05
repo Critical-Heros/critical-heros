@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: stress
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      containers:
+        - name: stress
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: BOOTH_PORT
+              value: {{ .Values.service.port | quote }}
+            - name: BOOTH_TARGET
+              value: {{ .Values.target | quote }}
+            - name: BOOTH_GRAFANA
+              value: {{ .Values.grafana | quote }}
+            - name: BOOTH_DURATION_MS
+              value: {{ .Values.durationMs | quote }}
+            - name: BOOTH_CONCURRENCY
+              value: {{ .Values.concurrency | quote }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10

@@ -1,5 +1,6 @@
 import { App } from '@slack/bolt'
 import { TARGET_ENVIRONMENT } from '@/constants'
+import { registerIncidentFixHandler } from './handlers/incident-fix'
 import { registerMentionHandler } from './handlers/mention'
 import { registerMessageHandler } from './handlers/message'
 import { registerSlashCommandHandler } from './handlers/slash-command'
@@ -22,6 +23,8 @@ export function createSlackApp(): App {
 
   registerMentionHandler(app)
   registerSlashCommandHandler(app)
+  // Incident approve/deny buttons -> open the fix PR (works in Socket Mode + HTTP).
+  registerIncidentFixHandler(app)
   // In develop the bot ingests messages; in production the slack-handler lambda owns ingestion.
   if (TARGET_ENVIRONMENT !== 'production') {
     registerMessageHandler(app)

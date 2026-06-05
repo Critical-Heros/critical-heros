@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Critical Heros — Demo</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: radial-gradient(circle at 50% 30%, #1b2030, #0a0c12 70%); color: #e8edf6;
+      }
+      .card {
+        position: relative; z-index: 2;
+        width: min(92vw, 560px); padding: 40px; border-radius: 20px; text-align: center;
+        background: rgba(20, 24, 34, 0.85); border: 1px solid #2a3346; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      }
+      h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: 1px; }
+      .sub { margin: 0 0 28px; color: #8a93a6; font-size: 13px; }
+      button#go {
+        width: 100%; padding: 26px; font-size: 26px; font-weight: 700; letter-spacing: 1px; cursor: pointer;
+        border: none; border-radius: 16px; color: #fff;
+        background: linear-gradient(135deg, #ff5d5d, #ff8a3d); box-shadow: 0 10px 30px rgba(255,93,93,.35);
+        transition: transform .08s ease, filter .2s ease, background .2s ease;
+      }
+      button#go.stop { background: linear-gradient(135deg, #d23b3b, #8a1f1f); box-shadow: 0 10px 30px rgba(210,59,59,.45); }
+      button#go:hover { filter: brightness(1.08); }
+      button#go:active { transform: scale(.98); }
+      .counter { margin: 28px 0 6px; font-size: 56px; font-weight: 800; font-variant-numeric: tabular-nums; }
+      .counter small { font-size: 16px; color: #8a93a6; font-weight: 500; }
+      .meta { display: flex; justify-content: center; gap: 24px; color: #9aa4b8; font-size: 14px; }
+      .bar { height: 8px; border-radius: 6px; background: #222a3a; margin: 22px 0 8px; overflow: hidden; }
+      .bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#ff5d5d,#ff8a3d); transition: width .4s ease; }
+      .status { min-height: 20px; font-size: 13px; color: #ffb27a; margin-top: 4px; }
+      a.grafana {
+        display: inline-block; margin-top: 22px; padding: 10px 18px; border-radius: 10px; font-size: 14px;
+        text-decoration: none; color: #cfe2ff; border: 1px solid #335; background: #141a2a;
+      }
+      .hint { margin-top: 18px; font-size: 12px; color: #6f7891; line-height: 1.5; }
+
+      /* Rising traffic bubbles */
+      #bubbles { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+      .bubble {
+        position: absolute; bottom: -40px; font-size: 12px; font-weight: 700; color: #0a0c12;
+        padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+        background: radial-gradient(circle at 35% 30%, #ffd9a8, #ff8a3d 70%);
+        box-shadow: 0 0 14px rgba(255,138,61,.7);
+        animation: rise linear forwards;
+      }
+      @keyframes rise {
+        0%   { transform: translateY(0) scale(.6); opacity: 0; }
+        12%  { opacity: 1; }
+        100% { transform: translateY(-105vh) scale(1.05); opacity: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bubbles"></div>
+    <div class="card">
+      <h1>CRITICAL HEROS</h1>
+      <p class="sub">Booth demo — send a traffic surge and watch Critical Hero react</p>
+
+      <button id="go">🔥 SEND TRAFFIC 🔥</button>
+
+      <div class="counter"><span id="count">0</span><br /><small>requests sent</small></div>
+      <div class="meta"><span id="rps">0 rps</span><span id="elapsed">0s</span></div>
+      <div class="bar"><span id="prog"></span></div>
+      <div class="status" id="status">Ready.</div>
+
+      <a class="grafana" id="grafana" href="#" target="_blank" rel="noopener">📊 Open Grafana dashboard</a>
+
+      <p class="hint">
+        The button only generates traffic. The spike fires a Prometheus alert, and
+        <b>Critical Hero</b> posts the incident to Slack with an approve-to-fix PR button.
+      </p>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id)
+      let grafanaUrl = null
+      let running = false
+
+      // The page is served at /stress (Traefik strips the prefix before the app sees it),
+      // so prefix API calls to match the ingress path. Works at the apex root too.
+      const PREFIX = /\/stress\/?$/.test(location.pathname) ? '/stress' : ''
+      const api = (p) => PREFIX + p
+
+      // --- rising bubbles ---------------------------------------------------
+      const labels = ['200', 'GET /health', 'req', '200 OK', '↑', 'mcp-server']
+      const layer = $('bubbles')
+      function spawnBubble() {
+        const b = document.createElement('div')
+        b.className = 'bubble'
+        b.textContent = labels[(Math.random() * labels.length) | 0]
+        b.style.left = (Math.random() * 96) + 'vw'
+        const dur = 0.7 + Math.random() * 0.8 // fast: 0.7-1.5s
+        b.style.animationDuration = dur + 's'
+        b.style.fontSize = (10 + Math.random() * 8) + 'px'
+        b.addEventListener('animationend', () => b.remove())
+        layer.appendChild(b)
+      }
+      // Spawn a fast stream while running (~28 bubbles/sec).
+      setInterval(() => { if (running) { spawnBubble(); spawnBubble(); } }, 36)
+
+      // --- status polling + toggle -----------------------------------------
+      async function refresh() {
+        try {
+          const s = await (await fetch(api('/api/status'))).json()
+          running = s.running
+          grafanaUrl = s.grafanaUrl
+          $('grafana').href = s.grafanaUrl
+          $('count').textContent = s.requestsSent.toLocaleString()
+          $('rps').textContent = s.rps.toLocaleString() + ' rps'
+          $('elapsed').textContent = Math.round(s.elapsedMs / 1000) + 's'
+          const pct = s.durationMs ? Math.min(100, (s.elapsedMs / s.durationMs) * 100) : 0
+          $('prog').style.width = pct + '%'
+          if (s.running) {
+            $('go').textContent = '■ STOP'
+            $('go').classList.add('stop')
+            $('status').textContent = '🔥 FLOODING ' + s.target + ' — watch Grafana + Slack…'
+          } else {
+            $('go').textContent = '🔥 SEND TRAFFIC 🔥'
+            $('go').classList.remove('stop')
+            if (s.requestsSent > 0) {
+              $('status').textContent = '✅ Sent ' + s.requestsSent.toLocaleString() + ' requests. Critical Hero is reacting — check Slack.'
+            }
+          }
+        } catch (e) {
+          $('status').textContent = 'status unavailable: ' + e.message
+        }
+      }
+
+      $('go').addEventListener('click', async () => {
+        if (running) {
+          $('status').textContent = 'stopping…'
+          await fetch(api('/api/stop'), { method: 'POST' })
+          return
+        }
+        $('status').textContent = 'starting…'
+        if (grafanaUrl) window.open(grafanaUrl, '_blank', 'noopener') // pop Grafana on the second screen
+        await fetch(api('/api/run'), { method: 'POST' })
+      })
+
+      setInterval(refresh, 400)
+      refresh()
+    </script>
+  </body>
+</html>

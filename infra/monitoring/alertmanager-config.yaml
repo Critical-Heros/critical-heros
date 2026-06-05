@@ -1,0 +1,25 @@
+# Routes the HighCpuLoad alert to Critical Hero's in-cluster webhook, which posts the Slack
+# incident + approve-to-fix PR. The Alertmanager CR uses empty config selectors, so it picks
+# up this AlertmanagerConfig. The default OnNamespace matcher scopes routes to alerts whose
+# namespace label matches this CR's namespace, so it lives in critical-hero (the alert carries
+# namespace="critical-hero").
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: critical-hero-incident
+  namespace: critical-hero
+spec:
+  route:
+    receiver: critical-hero-webhook
+    groupBy: ["alertname"]
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 10m
+    matchers:
+      - name: alertname
+        value: HighCpuLoad
+  receivers:
+    - name: critical-hero-webhook
+      webhookConfigs:
+        - url: http://mcp-server.critical-hero.svc.cluster.local:8401/webhook/prometheus
+          sendResolved: false
