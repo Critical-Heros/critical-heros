@@ -13,8 +13,8 @@ spec:
     - name: induck-demo.traffic
       rules:
         - alert: HighCpuLoad
-          # Idle induck-demo sits low; a request flood pushes total CPU across replicas past 0.15.
-          expr: sum(rate(container_cpu_usage_seconds_total{namespace="induck",pod=~"induck-demo.*",container!=""}[1m])) > 0.15
+          # Idle induck-demo sits near 0.0006 cores; a flood on a single replica pushes it past 0.05.
+          expr: sum(rate(container_cpu_usage_seconds_total{namespace="induck",pod=~"induck-demo.*",container!=""}[1m])) > 0.05
           for: 30s
           labels:
             severity: critical

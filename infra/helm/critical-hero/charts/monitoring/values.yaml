@@ -7,7 +7,7 @@ app: induck-demo
 targetNamespace: induck
 
 # CPU rate (cores, summed across the app's pods) that trips the alert.
-cpuThreshold: 0.15
+cpuThreshold: 0.05
 
 # Where the PrometheusRule is created (kube-prometheus-stack namespace) and the release label it selects on.
 promRuleNamespace: monitoring

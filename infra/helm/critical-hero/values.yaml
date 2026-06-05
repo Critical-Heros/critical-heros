@@ -107,7 +107,7 @@ stress:
 monitoring:
   enabled: true
   # app / targetNamespace are derived from global.targetApp.
-  cpuThreshold: 0.15
+  cpuThreshold: 0.05
   promRuleNamespace: monitoring
   prometheusReleaseLabel: prometheus
   webhookUrl: http://mcp-server.critical-hero.svc.cluster.local:8401/webhook/prometheus
