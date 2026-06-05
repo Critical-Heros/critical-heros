@@ -103,10 +103,11 @@ export async function webServer(server: McpServer, options: OptionsType) {
   // Health check for k8s liveness/readiness probes
   app.get('/health', async () => ({ status: 'ok' }))
 
-  // In-process webhooks run in develop; in production the lambdas own ingestion + PR review.
+  // The Prometheus webhook drives the incident pipeline, so it runs in every environment.
+  // The GitHub webhook stays develop-only; in production the lambda owns PR-merge ingestion.
+  await registerPrometheusWebhook(app)
   if (TARGET_ENVIRONMENT !== 'production') {
     await registerGithubWebhook(app)
-    await registerPrometheusWebhook(app)
   }
 
   app.listen({ port: options.port, host: '0.0.0.0' }, (err, address) => {

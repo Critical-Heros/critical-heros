@@ -19,6 +19,7 @@ jobs:
           - { service: slack, dockerfile: Dockerfile.slack }
           - { service: github-webhook, dockerfile: Dockerfile.github-webhook }
           - { service: slack-handler, dockerfile: Dockerfile.slack-handler }
+          - { service: stress, dockerfile: Dockerfile.stress }
     steps:
       - uses: actions/checkout@v4
 
@@ -77,6 +78,8 @@ jobs:
             --set mcp-server.image.tag="mcp-server-${{ github.sha }}" \
             --set slack.image.repository="$IMG" \
             --set slack.image.tag="slack-${{ github.sha }}" \
+            --set stress.image.repository="$IMG" \
+            --set stress.image.tag="stress-${{ github.sha }}" \
             --wait
 
       - name: Update lambda images

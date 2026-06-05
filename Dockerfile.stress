@@ -1,0 +1,10 @@
+# Stress trigger: the one-button page (critical-hero.uk/stress) that floods mcp-server to
+# demo the incident pipeline. Standalone Fastify script, run with tsx.
+FROM node:22-slim
+WORKDIR /app
+ENV HUSKY=0
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
+COPY scripts/booth-demo ./scripts/booth-demo
+EXPOSE 4545
+CMD ["npx", "tsx", "scripts/booth-demo/server.ts"]

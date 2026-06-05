@@ -1,0 +1,31 @@
+# Defaults; overridden by the parent chart's `stress:` section.
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: stress
+  pullPolicy: Always
+
+service:
+  port: 4545
+
+# Floods the in-cluster mcp-server service; Grafana link is the public host (opened in the browser).
+target: http://mcp-server.critical-hero.svc.cluster.local:8401
+grafana: https://grafana.critical-hero.uk
+durationMs: "120000"
+concurrency: "80"
+
+# Served at host/path via Traefik with a StripPrefix middleware so the app sees /.
+ingress:
+  enabled: true
+  host: critical-hero.uk
+  path: /stress
+  tls: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 96Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

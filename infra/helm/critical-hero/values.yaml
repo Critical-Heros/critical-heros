@@ -78,3 +78,21 @@ db:
     storage: 5Gi
   clickhouse:
     initSchema: true
+
+stress:
+  replicaCount: 1
+  image:
+    repository: "" # <ecr>/eeeemune/critical-hero, set by CD
+    tag: stress
+    pullPolicy: Always
+  service:
+    port: 4545
+  target: http://mcp-server.critical-hero.svc.cluster.local:8401
+  grafana: https://grafana.critical-hero.uk
+  durationMs: "120000"
+  concurrency: "80"
+  ingress:
+    enabled: true
+    host: critical-hero.uk
+    path: /stress
+    tls: true

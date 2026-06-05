@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify'
+import { type AlertmanagerPayload, triggerIncidentAlert } from '@/agent/triggerIncidentAlert'
 import { clickhouse } from '@/db/clickhouse'
 import { pool } from '@/db/postgres'
 import 'dotenv/config'
@@ -10,6 +11,7 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
     console.log(`Prometheus alert received: ${body.status}`)
 
     const alerts = body.alerts || []
+    let createdIncidentId: string | undefined
 
     for (const alert of alerts) {
       const alertName = alert.labels?.alertname || 'unknown'
@@ -62,7 +64,15 @@ export async function registerPrometheusWebhook(app: FastifyInstance) {
         })
 
         console.log(`Metric snapshot saved for: ${alertName}`)
+        createdIncidentId ??= incidentId
       }
+    }
+
+    // Hand off to the incident pipeline: post the Slack alert with an approve-to-fix button.
+    try {
+      await triggerIncidentAlert(body as AlertmanagerPayload, createdIncidentId)
+    } catch (err) {
+      console.error('triggerIncidentAlert failed:', err)
     }
 
     return reply.status(200).send({ message: 'OK' })
