@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { Octokit } from '@octokit/rest'
 import type { OptionsType } from '@/types'
 
+const COMMENT_MARKER = '<!-- critical-hero-blast-radius -->'
+
 export default function register(server: McpServer, _options: OptionsType) {
   server.registerTool(
     'post_pr_comment',
@@ -26,7 +28,8 @@ export default function register(server: McpServer, _options: OptionsType) {
 
       const riskEmoji = risk_score === 'HIGH' ? '🔴' : risk_score === 'MEDIUM' ? '🟡' : '🟢'
 
-      const body = `## 🤖 Critical Hero - Blast Radius 분석 결과
+      const body = `${COMMENT_MARKER}
+## 🤖 Critical Hero - Blast Radius 분석 결과
 
 ${riskEmoji} **위험도: ${risk_score}**
 
@@ -42,12 +45,30 @@ ${impacted_files.map(f => `- \`${f}\``).join('\n')}
 ---
 *Critical Hero AI Agent가 자동 생성한 분석입니다.*`
 
-      await octokit.issues.createComment({
+      // 기존 Critical Hero 코멘트가 있으면 덮어쓰고, 없으면 새로 작성
+      const existingComments = await octokit.issues.listComments({
         owner,
         repo,
         issue_number: pr_number,
-        body,
       })
+
+      const existing = existingComments.data.find(c => c.body?.includes(COMMENT_MARKER))
+
+      if (existing) {
+        await octokit.issues.updateComment({
+          owner,
+          repo,
+          comment_id: existing.id,
+          body,
+        })
+      } else {
+        await octokit.issues.createComment({
+          owner,
+          repo,
+          issue_number: pr_number,
+          body,
+        })
+      }
 
       return {
         content: [
