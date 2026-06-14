@@ -26,7 +26,7 @@ const GRAFANA_NS = process.env.BOOTH_GRAFANA_NS ?? 'induck'
 // "Kubernetes / Networking / Namespace (Pods)" — bandwidth-per-pod, the most visible spike.
 const GRAFANA_URL = `${GRAFANA_BASE}/d/8b7a8b326d7a6f1f04244066368c67af/kubernetes-networking-namespace-pods?orgId=1&var-namespace=${GRAFANA_NS}&from=now-15m&to=now&refresh=10s`
 
-const FLOOD_DURATION_MS = Number(process.env.BOOTH_DURATION_MS ?? 120_000)
+const FLOOD_DURATION_MS = Number(process.env.BOOTH_DURATION_MS ?? 600_000)
 const FLOOD_CONCURRENCY = Number(process.env.BOOTH_CONCURRENCY ?? 160)
 const PORT = Number(process.env.BOOTH_PORT ?? 4545)
 

@@ -41,8 +41,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: ${service}
-  minReplicas: 2
-  maxReplicas: 6
+  minReplicas: 1
+  maxReplicas: 1
   metrics:
     - type: Resource
       resource:
