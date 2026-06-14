@@ -1,0 +1,25 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: induck-demo
+  labels:
+    app: induck-demo
+  annotations:
+    # Auto-proposed remediation for incident HighCpuLoad.
+    # A traffic surge saturated a single induck-demo replica; scaling out on CPU keeps
+    # latency flat under load spikes.
+    critical-hero.io/incident: "HighCpuLoad"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: induck-demo
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
