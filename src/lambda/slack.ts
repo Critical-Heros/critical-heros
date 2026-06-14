@@ -3,6 +3,13 @@ import { WebClient } from '@slack/web-api'
 import { runAgent } from '@/agent/router'
 import { approveKnowledge, denyKnowledge } from '@/indexer/knowledge'
 import { ingestSlackMessage } from '@/slack/handlers/message'
+import {
+  approvedMessage,
+  deniedMessage,
+  type FixAction,
+  failedMessage,
+  openIncidentFixPr,
+} from '@/slack/incident-fix-core'
 import { toSlackMrkdwn } from '@/utils'
 
 // Minimal AWS Lambda Function URL event/response shapes (avoids an @types/aws-lambda dependency).
@@ -123,6 +130,32 @@ interface BlockActionsPayload {
   actions?: Array<{ action_id?: string; value?: string }>
   channel?: { id?: string }
   message?: { ts?: string }
+  user?: { id?: string }
+}
+
+// Approve/Deny the auto-proposed incident fix. This is the production interactivity endpoint
+// (the Bolt pod runs Socket Mode with no inbound port), so the fix buttons only work because the
+// Lambda handles them here, reusing the same core the pod uses.
+async function handleIncidentFix(payload: BlockActionsPayload, action: { action_id?: string; value?: string }) {
+  const channel = payload.channel?.id
+  const ts = payload.message?.ts
+  const userId = payload.user?.id
+  const value = JSON.parse(action.value ?? '{}') as FixAction
+
+  if (action.action_id === 'deny_fix_pr') {
+    if (channel && ts) await getSlack().chat.update({ channel, ts, ...deniedMessage(value, userId) })
+    return ok()
+  }
+
+  // approve_fix_pr
+  try {
+    const { result, service } = await openIncidentFixPr(value)
+    if (channel && ts) await getSlack().chat.update({ channel, ts, ...approvedMessage(value, result, service, userId) })
+  } catch (err) {
+    console.error('[lambda/slack] incident fix error:', err)
+    if (channel && ts) await getSlack().chat.update({ channel, ts, ...failedMessage(value, (err as Error).message) })
+  }
+  return ok()
 }
 
 // Handle the Approve/Deny buttons posted by save_knowledge. On approve the pending recipe
@@ -145,7 +178,14 @@ async function handleInteractivity(rawBody: string): Promise<LambdaResponse> {
   if (payload.type !== 'block_actions') return ok()
 
   const action = payload.actions?.[0]
-  if (!action?.value || (action.action_id !== 'approve_knowledge' && action.action_id !== 'deny_knowledge')) {
+  if (!action?.value) return ok()
+
+  // Incident fix buttons route through the shared core (opens the PR + edits the message).
+  if (action.action_id === 'approve_fix_pr' || action.action_id === 'deny_fix_pr') {
+    return handleIncidentFix(payload, action)
+  }
+
+  if (action.action_id !== 'approve_knowledge' && action.action_id !== 'deny_knowledge') {
     return ok()
   }
 

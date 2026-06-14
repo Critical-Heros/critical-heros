@@ -51,23 +51,23 @@ export async function triggerIncidentAlert(payload: AlertmanagerPayload, inciden
   // Post the incident with an approve-to-fix button. Approving opens the PR via openFixPr().
   await slackClient.chat.postMessage({
     channel,
-    text: `🚨 Incident detected: ${alertName} on ${service}`,
+    text: `🚨 인시던트 감지: ${alertName} (${service})`,
     blocks: [
-      { type: 'header', text: { type: 'plain_text', text: '🚨 Incident detected', emoji: true } },
+      { type: 'header', text: { type: 'plain_text', text: '🚨 인시던트 감지', emoji: true } },
       {
         type: 'section',
         fields: [
-          { type: 'mrkdwn', text: `*Service:*\n${service}` },
-          { type: 'mrkdwn', text: `*Alert:*\n${alertName}` },
-          { type: 'mrkdwn', text: `*Severity:*\n${severity}` },
-          { type: 'mrkdwn', text: `*Started:*\n${incidentTime}` },
+          { type: 'mrkdwn', text: `*서비스:*\n${service}` },
+          { type: 'mrkdwn', text: `*알림:*\n${alertName}` },
+          { type: 'mrkdwn', text: `*심각도:*\n${severity}` },
+          { type: 'mrkdwn', text: `*시작 시각:*\n${incidentTime}` },
         ],
       },
       {
         type: 'section',
         text: {
           type: 'mrkdwn',
-          text: `*Details:* ${description}\n\nCritical Hero prepared a fix: add a HorizontalPodAutoscaler so \`${service}\` scales out under load instead of saturating a single replica. Approve to open the PR.`,
+          text: `*상세:* ${description}\n\nCritical Hero가 해결 방법을 준비했어요: 트래픽이 몰릴 때 \`${service}\`가 자동으로 늘어나도록 오토스케일러(HPA)를 추가합니다. 승인하면 PR을 만들어요.`,
         },
       },
       {
@@ -75,14 +75,14 @@ export async function triggerIncidentAlert(payload: AlertmanagerPayload, inciden
         elements: [
           {
             type: 'button',
-            text: { type: 'plain_text', text: '✅ Approve & open fix PR', emoji: true },
+            text: { type: 'plain_text', text: '✅ 승인하고 PR 만들기', emoji: true },
             style: 'primary',
             action_id: 'approve_fix_pr',
             value: actionValue,
           },
           {
             type: 'button',
-            text: { type: 'plain_text', text: '✖ Deny', emoji: true },
+            text: { type: 'plain_text', text: '✖ 거부', emoji: true },
             style: 'danger',
             action_id: 'deny_fix_pr',
             value: actionValue,

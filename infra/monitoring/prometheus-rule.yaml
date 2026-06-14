@@ -1,4 +1,4 @@
-# Fires when the induck-demo app (the external app Critical Hero watches) has high CPU for 30s,
+# Fires when the induck-demo app (the external app Critical Hero watches) has high CPU for 5s,
 # i.e. during the booth traffic surge. The Prometheus CR uses an empty ruleSelector, so this is
 # picked up regardless of labels.
 apiVersion: monitoring.coreos.com/v1
@@ -15,11 +15,11 @@ spec:
         - alert: HighCpuLoad
           # Idle induck-demo sits near 0.0006 cores; a flood on a single replica pushes it past 0.05.
           expr: sum(rate(container_cpu_usage_seconds_total{namespace="induck",pod=~"induck-demo.*",container!=""}[1m])) > 0.05
-          for: 30s
+          for: 5s
           labels:
             severity: critical
             service: induck-demo
             namespace: induck
           annotations:
-            summary: "induck-demo CPU saturated by traffic surge"
-            description: "induck-demo CPU stayed above threshold for 30s, driven by a traffic spike."
+            summary: "induck-demo CPU 사용량이 갑자기 치솟았어요"
+            description: "induck-demo에 트래픽이 몰려서 CPU 사용량이 5초 넘게 높아요."
