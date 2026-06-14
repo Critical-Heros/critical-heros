@@ -160,6 +160,13 @@ resource "aws_instance" "k3s" {
   EOT
 
   tags = { Name = "${var.project_name}-k3s" }
+
+  # The ubuntu AMI data source uses most_recent, so it drifts whenever Canonical
+  # publishes a new image. Ignore it so a routine apply never destroys/recreates
+  # the whole cluster node. Bump deliberately (taint) when you actually want a new AMI.
+  lifecycle {
+    ignore_changes = [ami]
+  }
 }
 
 resource "aws_eip_association" "k3s" {

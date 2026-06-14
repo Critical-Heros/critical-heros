@@ -18,6 +18,10 @@ global:
   agentProvider: claude
   anthropicApiKey: ""
   claudeModel: claude-sonnet-4-6
+  # In-cluster MCP server address used by the agent (slack pod). Plain http: the pod
+  # speaks HTTP on 8401 and TLS is terminated at the ingress for external callers.
+  # Lambdas run outside the cluster and use the public https ingress; see infra/terraform/lambda.tf.
+  mcpServerUrl: "http://mcp-server.critical-hero.svc.cluster.local:8401/mcp"
   openaiApiKey: ""
   openaiModel: text-embedding-3-small
   githubToken: ""

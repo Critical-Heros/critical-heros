@@ -26,6 +26,10 @@ data "aws_ssm_parameters_by_path" "all" {
 
 locals {
   lambda_env = merge(
+    # The lambda runs the agent outside the cluster, so it must reach the MCP server
+    # over its public ingress (the localhost default only works in-cluster/local).
+    # An SSM param of the same name overrides this.
+    { MCP_SERVER_URL = "https://${var.mcp_host}/mcp" },
     {
       for i, name in data.aws_ssm_parameters_by_path.all.names :
       element(split("/", name), length(split("/", name)) - 1) => data.aws_ssm_parameters_by_path.all.values[i]
